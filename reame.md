@@ -15,3 +15,8 @@
 
 # OTP service
 1. https://www.fast2sms.com/dashboard/dlt-intro
+2. https://docs.fast2sms.com/?nodejs#post-method
+3. This servcie will not require any DLT configuration with the government.
+
+
+
