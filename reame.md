@@ -4,3 +4,14 @@
 
 # Environment Variables
 1. PORT=5000 . The port on which the server will run.
+
+# Mongoose Refernces
+1. Documentation : https://mongoosejs.com/docs/typescript.html
+2. Github(TomDoesTech) : https://github.com/TomDoesTech/The-Ultimate-Guide-to-TypeScript-With-Mongoose/blob/main/src/models/user.model.ts
+
+# OTP Model
+1. Medium Article : https://medium.com/geekculture/how-to-make-a-scalable-otp-service-3df8300941ba
+2. Github(Divyansh12) : https://github.com/Divyansh12/node-otp-service/tree/master/models
+
+# OTP service
+1. https://www.fast2sms.com/dashboard/dlt-intro

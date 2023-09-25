@@ -5,6 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import indexRoutes from './routes/indexRoute'
+import connectDB from './db/connect'
 const app = express();
 env.config();
 
@@ -23,7 +24,14 @@ app.use('/api/v1', indexRoutes);
 
 
 
-const port = process.env.PORT;
-app.listen(port, () => {
-  return console.log(`Express is listening at http://localhost:${port}`);
-});
+//starting the server
+const port = process.env.PORT
+const start = async (): Promise<void> => {
+    try {
+        await connectDB(process.env.MONGO_URI)
+        app.listen( port, () =>   console.log(`Listening on port ${port}`) )
+    } catch (error) {
+        console.log(error.message)
+    }
+}
+start()
