@@ -16,6 +16,8 @@ export interface IStudentInput {
 
 
 export interface IStudent extends IStudentInput,Document {
+    OtpAttemptCount: string;
+    lastOtpRequestTime: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -72,6 +74,13 @@ const StudentSchema = new Schema<IStudent, StudentModel, IStudentMethods>({
     password: {
         type: String,
         required: [true, 'Please provide a password']
+    },
+    OtpAttemptCount: {
+        type: String,
+        default: '0'
+    },
+    lastOtpRequestTime: {
+        type: Date
     }
 }, {timestamps: true})
 
@@ -97,10 +106,10 @@ StudentSchema.method('generateAuthToken', async function() {
 //                                                  middlewares
 //encryption of the password using pre mongoose middleware.
 //password => pre middleware does encryption => encrypted password saved in the database.
-StudentSchema.pre('save' , async function(req,res)  {
-    const salt = await bcrypt.genSalt(10);                   
-    this.password = await bcrypt.hash(this.password,salt)   
-}) 
+// StudentSchema.pre('save' , async function(req,res)  {
+//     const salt = await bcrypt.genSalt(10);                   
+//     this.password = await bcrypt.hash(this.password,salt)   
+// }) 
 
 //                                                  model
 const Student = mongoose.model<IStudent, StudentModel>('Student', StudentSchema);

@@ -26,6 +26,8 @@ const OtpSchema = new Schema<IOtp>({
     },
 }, {timestamps: true})
 
+// Create a TTL index on expiration_time with a 0-second expiration time
+OtpSchema.index({ expiration_time: 1 }, { expireAfterSeconds: 0 });
 
 //                                                  model
 const Otp = mongoose.model<IOtp>('Otp', OtpSchema);
