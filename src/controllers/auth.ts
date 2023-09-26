@@ -9,6 +9,7 @@ import bcrypt from 'bcrypt';
 import sendOtp from "../utils/sendOtp";
 import { MAX_OTP_TRIALS, MAX_OTP_TRIALS_IN_MINUTES, OTP_EXPIRE_AFTER_MINUTES } from "../constants/otp";
 import { decode, encode } from "../utils/crypt";
+import { emailOrPhoneNumber } from "../services/auth";
 
 const signup = catchAsync(async (req:Request,res:Response):Promise<void> => {
     
@@ -216,5 +217,46 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
 })
 
 
+const signin = catchAsync(async (req:Request,res:Response,next:NextFunction):Promise<void> => {
+    //user_contact can be email/phone
+    const { user_contact:userContact, password } = req.body;
 
-export default {signup, getOtp, verifyOtp};
+    if(!userContact)
+        return sendError(res, 400, 'User Contact not provided', {});
+
+    if(!password)
+        return sendError(res, 400, 'Password not provided', {});
+
+    //getting the type of user_contact either email or phone or invalid
+    const type = await emailOrPhoneNumber(userContact);
+
+    if(type === 'invalid')
+        return sendError(res, 400, 'Invalid User Contact', {});
+
+    //get the student from db
+    let student;
+    if(type === 'phone'){
+        student = await Student.findOne({phone:userContact});
+        if(!student)
+            return sendError(res, 400, 'Phone is not registered', {});
+    }
+    
+    if(type === 'email'){
+        student = await Student.findOne({email:userContact});
+        if(!student)
+            return sendError(res, 400, 'Email is not registered', {});
+    }
+
+    //create a token
+    const token = await student.generateAuthToken();
+    const response = {
+        user_id: student._id,
+        name: student.fullName(),
+        token,
+        phone:student.phone
+    }
+
+    sendSuccess(res, 200, 'Login Successful', response);
+})
+
+export default {signup, getOtp, verifyOtp, signin};

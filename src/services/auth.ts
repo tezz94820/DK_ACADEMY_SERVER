@@ -32,4 +32,19 @@ const createStudent = async (first_name:string, last_name:string, email:string, 
     await newStudent.save();
     return newStudent;
 }
-export { checkStudentAlreadyPresent, checkStudentIsVerified, deleteStudent, createStudent }
+
+
+const emailOrPhoneNumber = (userContact:string):Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const phoneRegex = /^\d{10}$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+        if(phoneRegex.test(userContact))
+            return resolve('phone');
+        else if(emailRegex.test(userContact))
+            return resolve('email');
+        else
+            return resolve('invalid');
+    });
+}
+export { checkStudentAlreadyPresent, checkStudentIsVerified, deleteStudent, createStudent, emailOrPhoneNumber }
