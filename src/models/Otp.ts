@@ -5,7 +5,6 @@ import { Request, Response } from 'express';
 export interface IOtp extends Document {
     otp: string;
     expiration_time: Date;
-    verified: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -19,11 +18,7 @@ const OtpSchema = new Schema<IOtp>({
     expiration_time: {
         type: Date,
         required: [true, 'please enter OTP expiration time']
-    },
-    verified: {
-        type: Boolean,
-        required: [true, 'please enter OTP Verified']
-    },
+    }
 }, {timestamps: true})
 
 // Create a TTL index on expiration_time with a 0-second expiration time
