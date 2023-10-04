@@ -8,6 +8,8 @@ router.post('/signin', authController.signin);
 router.post('/otp/phone', authController.getOtp);
 // router.post('/otp/email', authController.getOtpEmail);
 router.post('/otp/verify', authController.verifyOtp);
+router.post('/changepassword', authController.changePassword);
+
 
 
 export default router;

@@ -150,7 +150,8 @@ const getOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
 const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Promise<void> => {
     
     const currentDate = new Date(); 
-    const {verification_code, otp, check} = req.body;
+    const {verification_code, otp, check, type} = req.body;
+    //type :- FORGOT,REGISTER
 
     if(!verification_code){
       const response={"Status":"Failure","Details":"Verification Key not provided"}
@@ -166,6 +167,11 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
       return sendError(res, 400, 'phone number not provided', response);
     }
 
+    if(!type){
+        const response={"Status":"Failure","Details":"Type not provided"}
+        return sendError(res, 400, 'type not provided', response);
+      }
+
     //Check if verification key is altered or not
     let decoded:string;
     try {
@@ -176,6 +182,7 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
         
     const decodedObj = JSON.parse(decoded);
 
+    //check is phone number
     // Check if the OTP was meant for the same email or phone number for which it is being verified 
     if(decodedObj.check!=check){
       const response={"Status":"Failure", "Details": "OTP was not sent to this particular email or phone number"}
@@ -195,22 +202,32 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
     //Check if OTP is equal to the OTP in the DB
     if(otp!=otp_instance.otp)
         return sendError(res, 400, 'Incorrect OTP', {});
-
-    const student = await Student.findOne({phone:check});
-
-    if(!student)
-        return sendError(res, 400, 'Student not found with this phone number', {});
-
-    student.phone_verified = true;
-    await student.save();
-    // create a token
-    const token = await student.generateAuthToken();
-    const response = {
-        otp_verified:true,
-        user_id: student._id,
-        name: student.fullName(),
-        token,
-        phone:check  
+    
+    // if register then 
+    let response = {};
+    if(type === 'REGISTER'){
+        const student = await Student.findOne({phone:check});
+        
+        if(!student)
+            return sendError(res, 400, 'Student not found with this phone number', {});
+        
+        student.phone_verified = true;
+        await student.save();
+        // create a token
+        const token = await student.generateAuthToken();
+        response = {
+            otp_verified:true,
+            user_id: student._id,
+            name: student.fullName(),
+            token,
+            phone:check  
+        }
+    }
+    else if(type === 'FORGOT'){
+        response = {
+            otp_verified:true,
+            phone:check  
+        }
     }
 
     return sendSuccess(res, 200, 'OTP verified', response);
@@ -259,4 +276,33 @@ const signin = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
     sendSuccess(res, 200, 'Login Successful', response);
 })
 
-export default {signup, getOtp, verifyOtp, signin};
+
+const changePassword = catchAsync(async (req:Request,res:Response,next:NextFunction):Promise<void> => {
+    //user_contact can be email/phone
+    const { phone, new_password:newPassword } = req.body;
+
+    if(!phone)
+        return sendError(res, 400, 'Phone number not provided', {});
+
+    if(!newPassword)
+        return sendError(res, 400, 'New Password not provided', {});
+
+    //encryt the new password
+    const salt = await bcrypt.genSalt(10);                   
+    const hashedPassword = await bcrypt.hash(newPassword,salt);
+    
+    // find the stduent by phone number and update the password with new hashedPassword
+    const student = await Student.findOneAndUpdate( {phone}, {$set:{password:hashedPassword}}, {new:true});
+    if(!student)
+        return sendError(res, 400, 'Student not found', {});
+    
+    const response = {
+        check:phone,
+        success:true,
+        message:"Password changed successfully"        
+    }
+
+    sendSuccess(res, 200, 'Password changed Successfully', response);
+})
+
+export default {signup, getOtp, verifyOtp, signin, changePassword};
