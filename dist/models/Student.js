@@ -22,8 +22,22 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const bcrypt_1 = __importDefault(require("bcrypt"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 //schema
 const StudentSchema = new mongoose_1.Schema({
     first_name: {
@@ -64,13 +78,45 @@ const StudentSchema = new mongoose_1.Schema({
     email_verified: {
         type: Boolean,
         default: false
+    },
+    password: {
+        type: String,
+        required: [true, 'Please provide a password']
+    },
+    OtpAttemptCount: {
+        type: String,
+        default: '0'
+    },
+    lastOtpRequestTime: {
+        type: Date
     }
 }, { timestamps: true });
-//instance Methods
+//                                       instance Methods
 StudentSchema.method('fullName', function fullName() {
     return this.first_name + ' ' + this.last_name;
 });
-//model
+//comparing the password by bcrypt
+StudentSchema.method('comparePassword', function (userPassword) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const isMatch = yield bcrypt_1.default.compare(userPassword, this.password);
+        return isMatch;
+    });
+});
+//creating token
+StudentSchema.method('generateAuthToken', function () {
+    return __awaiter(this, void 0, void 0, function* () {
+        const token = jsonwebtoken_1.default.sign({ userId: this._id, username: this.fullName() }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_LIFETIME });
+        return token;
+    });
+});
+//                                                  middlewares
+//encryption of the password using pre mongoose middleware.
+//password => pre middleware does encryption => encrypted password saved in the database.
+// StudentSchema.pre('save' , async function(req,res)  {
+//     const salt = await bcrypt.genSalt(10);                   
+//     this.password = await bcrypt.hash(this.password,salt)   
+// }) 
+//                                                  model
 const Student = mongoose_1.default.model('Student', StudentSchema);
 //export
 exports.default = Student;

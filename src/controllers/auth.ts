@@ -11,7 +11,7 @@ import { MAX_OTP_TRIALS, MAX_OTP_TRIALS_IN_MINUTES, OTP_EXPIRE_AFTER_MINUTES } f
 import { decode, encode } from "../utils/crypt";
 import { emailOrPhoneNumber } from "../services/auth";
 
-const signup = catchAsync(async (req:Request,res:Response):Promise<void> => {
+const register = catchAsync(async (req:Request,res:Response):Promise<void> => {
     
     if (!req.body.first_name) {
         return sendError(res, 400, 'Please provide your first name', {});
@@ -234,7 +234,7 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
 })
 
 
-const signin = catchAsync(async (req:Request,res:Response,next:NextFunction):Promise<void> => {
+const login = catchAsync(async (req:Request,res:Response,next:NextFunction):Promise<void> => {
     //user_contact can be email/phone
     const { user_contact:userContact, password } = req.body;
 
@@ -263,6 +263,11 @@ const signin = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
         if(!student)
             return sendError(res, 400, 'Email is not registered', {});
     }
+
+    //check the password is correct
+    const isMatch = await student.comparePassword(password);
+    if(!isMatch)
+        return sendError(res, 400, 'Invalid Password', {});
 
     //create a token
     const token = await student.generateAuthToken();
@@ -305,4 +310,4 @@ const changePassword = catchAsync(async (req:Request,res:Response,next:NextFunct
     sendSuccess(res, 200, 'Password changed Successfully', response);
 })
 
-export default {signup, getOtp, verifyOtp, signin, changePassword};
+export default {register, getOtp, verifyOtp, login, changePassword};
