@@ -1,8 +1,9 @@
 module.exports = {
-    script: 'tsc && node dist/app.js',
-    name: 'dk_academy_server',
-    exec_mode: 'cluster', // Optional: Use 'cluster' mode for better performance
-    instances: 1, // Optional: Set the number of instances based on your needs
-    // other PM2 configuration options as needed pm2
+    script: 'src/app.ts',
+    interpreter: '/home/ubuntu/.nvm/versions/node/v20.9.0/lib/node_modules/ts-node/dist/bin.js',
+    watch: true,
+    exec_mode: 'cluster',
+    instances: 1,
+    name: 'dk_academy_server', // Replace with your desired app name
 };
   
