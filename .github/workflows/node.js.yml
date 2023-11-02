@@ -27,7 +27,7 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - name: Restart PM2 Process
-      run: pm2 restart pm2.config.js
+      run: pm2 restart ecosystem.config.js
       env:
         PORT: ${{ secrets.PORT }}
         NODE_ENV: ${{ secrets.NODE_ENV }}
