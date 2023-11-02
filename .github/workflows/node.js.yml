@@ -24,6 +24,20 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - name: Make envfile
+      uses: DK_ACADEMY_SERVER/create-envfile@v2.0
+      with:
+        envkey_PORT: ${{ secrets.PORT }}
+        envkey_NODE_ENV: ${{ secrets.NODE_ENV }}
+        envkey_MONGO_URI: ${{ secrets.MONGO_URI }}
+        envkey_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        envkey_JWT_LIFETIME: ${{ secrets.JWT_LIFETIME }}
+        envkey_FAST2SMS_API_KEY: ${{ secrets.FAST2SMS_API_KEY }}
+        envkey_CRYPT_PASSWORD: ${{ secrets.CRYPT_PASSWORD }}
+        envkey_CRYPT_IV: ${{ secrets.CRYPT_IV }}
+        file_name: .env
+        fail_on_empty: false
+        sort_keys: false
     - run: npm ci
     - run: npm run build --if-present
     - run: pm2 restart pm2.config.js
