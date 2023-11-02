@@ -25,7 +25,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - name: Make envfile
-      uses: DK_ACADEMY_SERVER/create-envfile@v2.0
+      uses: tezz94820/DK_ACADEMY_SERVER
       with:
         envkey_PORT: ${{ secrets.PORT }}
         envkey_NODE_ENV: ${{ secrets.NODE_ENV }}
