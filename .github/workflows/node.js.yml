@@ -32,3 +32,8 @@ jobs:
         PORT: ${{ secrets.PORT }}
         NODE_ENV: ${{ secrets.NODE_ENV }}
         MONGO_URI: ${{ secrets.MONGO_URI }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        JWT_LIFETIME: ${{ secrets.JWT_LIFETIME }}
+        FAST2SMS_API_KEY: ${{ secrets.FAST2SMS_API_KEY }}
+        CRYPT_PASSWORD: ${{ secrets.CRYPT_PASSWORD }}
+        CRYPT_IV: ${{ secrets.CRYPT_IV }}
