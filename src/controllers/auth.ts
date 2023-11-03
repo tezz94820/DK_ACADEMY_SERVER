@@ -39,7 +39,7 @@ const register = catchAsync(async (req:Request,res:Response):Promise<void> => {
 
     //if already present and verified then he can directly login
     if(alreadyPresentStudent && alreadyPresentStudent.phone_verified)
-        return sendError(res, 400, 'Student already present. you can login', {});
+        return sendSuccess(res, 400, 'Student already present. you can login', {});
     
     //if already present but not verified then delete the already present entry
     if(alreadyPresentStudent && !alreadyPresentStudent.phone_verified){
@@ -51,7 +51,7 @@ const register = catchAsync(async (req:Request,res:Response):Promise<void> => {
     password = await bcrypt.hash(password,salt);
 
     //create new Student
-    const newStudent = new Student({
+    const newStudent = await Student.create({
         first_name,
         last_name,
         email,
@@ -60,10 +60,7 @@ const register = catchAsync(async (req:Request,res:Response):Promise<void> => {
         phone_verified: false,
         email_verified: false
     });
-    await newStudent.validate();
-    await newStudent.save();
 
-    
     const response = {};
     sendSuccess(res, 200, 'Student created successfully', response);
 })
@@ -269,6 +266,10 @@ const login = catchAsync(async (req:Request,res:Response,next:NextFunction):Prom
     if(!isMatch)
         return sendError(res, 400, 'Invalid Password', {});
 
+    //check the phone is verified
+    if(!student.phone_verified)
+        return sendError(res, 400, 'Phone is not verified', {});
+    
     //create a token
     const token = await student.generateAuthToken();
     const response = {

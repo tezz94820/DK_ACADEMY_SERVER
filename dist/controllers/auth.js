@@ -221,6 +221,9 @@ const login = (0, catchAsync_1.default)((req, res, next) => __awaiter(void 0, vo
     const isMatch = yield student.comparePassword(password);
     if (!isMatch)
         return (0, ApiResponse_1.sendError)(res, 400, 'Invalid Password', {});
+    //check the phone is verified
+    if (!student.phone_verified)
+        return (0, ApiResponse_1.sendError)(res, 400, 'Phone is not verified', {});
     //create a token
     const token = yield student.generateAuthToken();
     const response = {
