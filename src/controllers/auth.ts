@@ -293,7 +293,7 @@ const changePassword = catchAsync(async (req:Request,res:Response,next:NextFunct
     if(!newPassword)
         return sendError(res, 400, 'New Password not provided', {});
 
-    //encryt the new password
+    //encryt the new password and 
     const salt = await bcrypt.genSalt(10);                   
     const hashedPassword = await bcrypt.hash(newPassword,salt);
     
