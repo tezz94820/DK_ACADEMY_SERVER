@@ -11,47 +11,26 @@ nvm node npm git installer
 1. screen -ls :-  https://dev.to/akhileshthite/how-to-keep-ec2-instance-running-after-ssh-is-terminated-45k8
 
 
+# creating a new subdomain of api.dkacademy.co.in
+1. I bought a new domain named dkacademy.co.in from godaddy.
+2. Vercel gave me 1 IP address and I linked that IP address with the domain.
+3. so now vercel has made a SSL certificate for me for dkacademy.co.in
+4. Now for server I have made a new subdomain named api.dkacademy.co.in and linked my elastic IP address of my EC2 instance with the subdomain on godaddy.
 
-
-
-
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Node.js CI
-
-on:
-  push:
-    branches: [ "main" ]
-
-jobs:
-  build:
-
-    runs-on: self-hosted
-
-    strategy:
-      matrix:
-        node-version: [20.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    - name: Define Environment Variables
-      run: echo defining PORT, NODE_ENV , MONGO_URI, JWT_SECRET, JWT_LIFETIME, FAST2SMS_API_KEY, CRYPT_PASSWORD, CRYPT_IV
-      env:
-        PORT: ${{ secrets.PORT }}
-        NODE_ENV: ${{ secrets.NODE_ENV }}
-        MONGO_URI: ${{ secrets.MONGO_URI }}
-        JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        JWT_LIFETIME: ${{ secrets.JWT_LIFETIME }}
-        FAST2SMS_API_KEY: ${{ secrets.FAST2SMS_API_KEY }}
-        CRYPT_PASSWORD: ${{ secrets.CRYPT_PASSWORD }}
-        CRYPT_IV: ${{ secrets.CRYPT_IV }}
-    - run: npm ci
-    - run: npm run build --if-present
-    - run: pm2 restart pm2.config.js
+# using certbot for making a SSL certificate.
+1. Install Certbot: 
+  sudo apt-get update
+  sudo apt-get install certbot
+2. Obtain SSL Certificate and Key:
+  sudo apt-get install python3-certbot-nginx
+  sudo certbot certonly --nginx
+3. Find the Certificate and Key Files:
+  Certbot stores the obtained certificates in the /etc/letsencrypt/live directory. You can find the certificate and private key files there. For example:
+  Certificate file: /etc/letsencrypt/live/your_domain/fullchain.pem
+  Private key file: /etc/letsencrypt/live/your_domain/privkey.pem
+4. Update Nginx Configuration:
+Update your Nginx configuration to point to the obtained certificate and private key. As mentioned in the previous response, replace the SSL certificate and key paths in your Nginx configuration:
+  ssl_certificate /etc/letsencrypt/live/your_domain/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/your_domain/privkey.pem;
+5. Restart Nginx:
+  sudo service nginx restart
