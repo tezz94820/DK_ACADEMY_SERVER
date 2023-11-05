@@ -35,7 +35,7 @@ const register = catchAsync(async (req:Request,res:Response):Promise<void> => {
 
     let {first_name,last_name,email,phone,password} = req.body;
     
-    const alreadyPresentStudent = await Student.findOne({phone:req.body.phone});
+    const alreadyPresentStudent = await Student.findOne({phone});
 
     //if already present and verified then he can directly login
     if(alreadyPresentStudent && alreadyPresentStudent.phone_verified)
@@ -61,7 +61,7 @@ const register = catchAsync(async (req:Request,res:Response):Promise<void> => {
         email_verified: false
     });
 
-    const response = {};
+    const response = {phone};
     sendSuccess(res, 200, 'Student created successfully', response);
 })
 
@@ -100,8 +100,8 @@ const getOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
         return sendError(res, 400, 'Only 3 OTP request in 1 hour. Now apply after 1 hr', response);
     }
 
-        //Generate OTP 
-    const otp = otpGenerator.generate(6, { lowerCaseAlphabets: false, upperCaseAlphabets: false, specialChars: false });
+    //Generate OTP 
+    const otp = otpGenerator.generate(4, { lowerCaseAlphabets: false, upperCaseAlphabets: false, specialChars: false });
     const expiration_time = AddMinutesToDate(currentDate,OTP_EXPIRE_AFTER_MINUTES);
     
     //Create OTP instance in OTP model
@@ -146,35 +146,36 @@ const getOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
 
 const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Promise<void> => {
     
-    const currentDate = new Date(); 
     const {verification_code, otp, check, type} = req.body;
+    const currentDate = new Date(); 
     //type :- FORGOT,REGISTER
+    // check is phone number
 
     if(!verification_code){
-      const response={"Status":"Failure","Details":"Verification Key not provided"}
-      return sendError(res, 400, 'Verification code not provided', response); 
+      const errorData={"Status":"Failure","Details":"Verification Key not provided"}
+      return sendError(res, 400, 'Verification code not provided', errorData); 
     }
     if(!otp){
-      const response={"Status":"Failure","Details":"OTP not Provided"}
-      return sendError(res, 400, 'Otp not provided', response); 
+      const errorData={"Status":"Failure","Details":"OTP not Provided"}
+      return sendError(res, 400, 'Otp not provided', errorData); 
     }
 
     if(!check){
-      const response={"Status":"Failure","Details":"phone number not provided"}
-      return sendError(res, 400, 'phone number not provided', response);
+      const errorData={"Status":"Failure","Details":"phone number not provided"}
+      return sendError(res, 400, 'phone number not provided', errorData);
     }
 
     if(!type){
-        const response={"Status":"Failure","Details":"Type not provided"}
-        return sendError(res, 400, 'type not provided', response);
+        const errorData={"Status":"Failure","Details":"Type not provided"}
+        return sendError(res, 400, 'type not provided', errorData);
       }
 
-    //Check if verification key is altered or not
+    //Check if verification code is altered or not
     let decoded:string;
     try {
         decoded = await decode(verification_code);
     } catch (error) {
-        return sendError(res, 400, 'Verification code not valid', {});
+        return sendError(res, 400, 'Verification code not valid', {message:"Verification code not valid"});
     }
         
     const decodedObj = JSON.parse(decoded);
@@ -182,34 +183,35 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
     //check is phone number
     // Check if the OTP was meant for the same email or phone number for which it is being verified 
     if(decodedObj.check!=check){
-      const response={"Status":"Failure", "Details": "OTP was not sent to this particular email or phone number"}
-      return sendError(res, 400, 'OTP was not sent to this particular email or phone number', response);
+      const errorData={"Status":"Failure", "Details": "OTP was not sent to this particular email or phone number"}
+      return sendError(res, 400, 'OTP was not sent to this particular email or phone number', errorData);
     }
 
     const otp_instance = await Otp.findById(decodedObj.otp_id);
     
     // if otp is not present in db
     if(!otp_instance)
-        return sendError(res, 400, 'Otp is expired', {});
+        return sendError(res, 400, 'Otp is expired', {message:"Otp is expired"});
     
     // if otp is expired
     if(otp_instance.expiration_time < currentDate)
-        return sendError(res, 400, 'Otp is expired', {});
+        return sendError(res, 400, 'Otp is expired', {message:"Otp is expired"});
 
     //Check if OTP is equal to the OTP in the DB
     if(otp!=otp_instance.otp)
-        return sendError(res, 400, 'Incorrect OTP', {});
+        return sendError(res, 400, 'Incorrect OTP', {message:"Incorrect OTP"});
+
+    //so if the otp matches delete the OTP from db
+    await Otp.findByIdAndDelete(decodedObj.otp_id);
     
     // if register then 
     let response = {};
     if(type === 'REGISTER'){
-        const student = await Student.findOne({phone:check});
-        
+        //  update phone_verified of that student to true
+        const student = await Student.findOneAndUpdate({phone:check},{phone_verified:true});
         if(!student)
-            return sendError(res, 400, 'Student not found with this phone number', {});
+            return sendError(res, 400, 'Student not found with this phone number', {message:"Student not found with this phone number"});
         
-        student.phone_verified = true;
-        await student.save();
         // create a token
         const token = await student.generateAuthToken();
         response = {
