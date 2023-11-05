@@ -94,7 +94,10 @@ const loginValidationSchema = Joi.object({
       "any.required": "Email is required.",
       "string.empty": "Email cannot be empty.",
       "string.email": "Invalid email format.",
-    })
+    }),
+    Joi.any().messages({ 
+      "any.invalid": "Invalid user contact. Must be a valid phone number or email." })
+
   ),
   password: Joi.string().pattern(new RegExp("^[a-zA-Z0-9@]{3,30}$")).required().messages({
     "any.required": "Password is required.",

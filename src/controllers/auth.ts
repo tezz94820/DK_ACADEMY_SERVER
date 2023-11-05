@@ -100,11 +100,13 @@ const getOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
     // Encrypt the details object
     const encoded = await encode(JSON.stringify(details));
     
-    // // sendOTP by fast2way sms :- it is set but unabled it to save cost
-    // const sendDetails = await sendOtp(otp,phone);
-    
-    // if(!sendDetails.return)
-    //     return sendError(res, 400, 'Failed to send OTP', {status:"fail"});
+    // sendOTP by fast2way sms :- it is set but unabled it to save cost
+    if(process.env.NODE_ENV === 'production'){
+        const sendDetails = await sendOtp(otp,phone);
+        
+        if(!sendDetails.return)
+            return sendError(res, 400, 'Failed to send OTP', {status:"fail"});
+    }
     
     const response = {
             verification_code:encoded
