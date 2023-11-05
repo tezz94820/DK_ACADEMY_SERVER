@@ -10,36 +10,17 @@ import sendOtp from "../utils/sendOtp";
 import { MAX_OTP_TRIALS, MAX_OTP_TRIALS_IN_MINUTES, OTP_EXPIRE_AFTER_MINUTES } from "../constants/otp";
 import { decode, encode } from "../utils/crypt";
 import { emailOrPhoneNumber } from "../services/auth";
+import { registerValidationSchema } from '../validations/auth'
 
 const register = catchAsync(async (req:Request,res:Response):Promise<void> => {
     
-    if (!req.body.first_name) {
-        return sendError(res, 400, 'Please provide your first name', {});
-    }
-    
-    if (!req.body.last_name) {
-        return sendError(res, 400, 'Please provide your last name', {});
-    }
-
-    if (!req.body.email) {
-        return sendError(res, 400, 'Please provide your email', {});
-    }
-
-    if (!req.body.phone) {
-        return sendError(res, 400, 'Please provide your phone number', {});
-    }
-
-    if (!req.body.password) {
-        return sendError(res, 400, 'Please provide your password', {});
-    }
-
     let {first_name,last_name,email,phone,password} = req.body;
     
     const alreadyPresentStudent = await Student.findOne({phone});
 
     //if already present and verified then he can directly login
     if(alreadyPresentStudent && alreadyPresentStudent.phone_verified)
-        return sendSuccess(res, 400, 'Student already present. you can login', {});
+        return sendSuccess(res, 400, 'You Are already registered. you can login', {});
     
     //if already present but not verified then delete the already present entry
     if(alreadyPresentStudent && !alreadyPresentStudent.phone_verified){
@@ -72,12 +53,8 @@ const getOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
     const {phone} = req.body;
     const currentDate = new Date();
 
-    if(!phone){
-      const response={"status":"Failure","details":"Phone Number not provided"}
-      return sendError(res, 400, 'Phone Number not provided', response); 
-    }
-    
     const student = await Student.findOne({phone:phone});
+    
     if(!student){
       const response={"status":"Failure","details":"Student not found"}
       return sendError(res, 400, 'Student not found', response); 
@@ -149,26 +126,6 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
     const {verification_code, otp, check, type} = req.body;
     const currentDate = new Date(); 
     //type :- FORGOT,REGISTER
-    // check is phone number
-
-    if(!verification_code){
-      const errorData={"Status":"Failure","Details":"Verification Key not provided"}
-      return sendError(res, 400, 'Verification code not provided', errorData); 
-    }
-    if(!otp){
-      const errorData={"Status":"Failure","Details":"OTP not Provided"}
-      return sendError(res, 400, 'Otp not provided', errorData); 
-    }
-
-    if(!check){
-      const errorData={"Status":"Failure","Details":"phone number not provided"}
-      return sendError(res, 400, 'phone number not provided', errorData);
-    }
-
-    if(!type){
-        const errorData={"Status":"Failure","Details":"Type not provided"}
-        return sendError(res, 400, 'type not provided', errorData);
-      }
 
     //Check if verification code is altered or not
     let decoded:string;
@@ -180,7 +137,6 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
         
     const decodedObj = JSON.parse(decoded);
 
-    //check is phone number
     // Check if the OTP was meant for the same email or phone number for which it is being verified 
     if(decodedObj.check!=check){
       const errorData={"Status":"Failure", "Details": "OTP was not sent to this particular email or phone number"}
@@ -236,12 +192,6 @@ const verifyOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):
 const login = catchAsync(async (req:Request,res:Response,next:NextFunction):Promise<void> => {
     //user_contact can be email/phone
     const { user_contact:userContact, password } = req.body;
-
-    if(!userContact)
-        return sendError(res, 400, 'User Contact not provided', {});
-
-    if(!password)
-        return sendError(res, 400, 'Password not provided', {});
 
     //getting the type of user_contact either email or phone or invalid
     const type = await emailOrPhoneNumber(userContact);
