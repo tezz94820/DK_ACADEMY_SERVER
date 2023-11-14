@@ -5,8 +5,6 @@ import { Request, Response } from 'express';
 export interface IOtp extends Document {
     otp: string;
     expiration_time: Date;
-    createdAt: Date;
-    updatedAt: Date;
 }
 
 //schema

@@ -18,8 +18,6 @@ export interface IStudentInput {
 export interface IStudent extends IStudentInput,Document {
     OtpAttemptCount: string;
     lastOtpRequestTime: Date;
-    createdAt: Date;
-    updatedAt: Date;
 }
 
 interface IStudentMethods {
