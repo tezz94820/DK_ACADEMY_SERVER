@@ -14,6 +14,7 @@ export interface IPYQPDF extends Document {
     content_link: string;
     free: boolean;
     language: string;
+    display_priority: string;
 }
 
 //schema
@@ -63,6 +64,10 @@ const PYQPDFSchema = new Schema<IPYQPDF>({
     language:{
         type: String,
         default: "English",
+    },
+    display_priority:{
+        type: String,
+        required: [true, 'Please enter display_priority'],
     }
 }, {timestamps: true})
 

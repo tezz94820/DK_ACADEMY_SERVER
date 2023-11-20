@@ -41,6 +41,10 @@ const createPdfValidationSchema = Joi.object({
   language: Joi.string().messages({
     "string.base": 'The free field must be a boolean value',
   }),
+  display_priority: Joi.string().messages({
+    "any.required": "display_priority is required.",
+    "string.empty": "display_priority cannot be empty.",
+  }),
 });
 
 

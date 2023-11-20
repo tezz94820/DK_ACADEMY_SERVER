@@ -117,7 +117,7 @@ const getOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
     student.OtpAttemptCount = String(parseInt(student.OtpAttemptCount) + 1);
     await student.save();
 
-    sendSuccess(res, 200, 'OTP sent Successful', response);
+    return sendSuccess(res, 200, 'OTP sent Successful', response);
 
 })
 
@@ -233,7 +233,7 @@ const login = catchAsync(async (req:Request,res:Response,next:NextFunction):Prom
         phone:student.phone
     }
 
-    sendSuccess(res, 200, 'Login Successful', response);
+    return sendSuccess(res, 200, 'Login Successful', response);
 })
 
 
@@ -262,7 +262,7 @@ const changePassword = catchAsync(async (req:Request,res:Response,next:NextFunct
         message:"Password changed successfully"        
     }
 
-    sendSuccess(res, 200, 'Password changed Successfully', response);
+    return sendSuccess(res, 200, 'Password changed Successfully', response);
 })
 
 export default {register, getOtp, verifyOtp, login, changePassword};
