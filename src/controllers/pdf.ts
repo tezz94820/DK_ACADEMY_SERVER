@@ -63,7 +63,7 @@ const getPdfPage = catchAsync(async (req:Request,res:Response):Promise<void> => 
         return sendError(res, 400, 'No PDF Found', pdf);
     if(pdf.free){
         // create a pre signed url for the user
-        const presignedUrl = await createPresignedUrlByKey(`pyq-pdf/${pdf._id}/pdf.pdf`,20);
+        const presignedUrl = await createPresignedUrlByKey(`pyq-pdf/${pdf._id}/pdf.pdf`,5);
         //send the presigned url to user
         return sendSuccess(res, 200, 'successful request', {presignedUrl});
     }
