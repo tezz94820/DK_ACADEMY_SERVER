@@ -21,6 +21,7 @@ export interface IPYQPDF extends Document {
 const PYQPDFSchema = new Schema<IPYQPDF>({
     title: {
         type: String,
+        unique: true,
         required: [true, 'Please enter the title'],
     },
     module: {
