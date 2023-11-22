@@ -26,7 +26,7 @@ interface IStudentMethods {
     generateAuthToken(): Promise<string>;
 }
 
-export type StudentModel = Model<IStudent, {}, IStudentMethods>;
+export  type StudentModel = Model<IStudent, {}, IStudentMethods>;
 
 //schema
 const StudentSchema = new Schema<IStudent, StudentModel, IStudentMethods>({
