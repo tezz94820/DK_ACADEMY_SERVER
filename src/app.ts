@@ -12,7 +12,7 @@ env.config();
 //middlewares
 app.use(cors(corsOptions));
 app.use(helmet());
-app.use(express.json({ limit: '10kb' })); //body data to json
+app.use(express.json({ limit: '20kb' })); //body data to json
 app.use(express.urlencoded({ extended: true, limit: '10kb' })); //urlencoded data
 //development middlewares
 if (process.env.NODE_ENV === 'development') {

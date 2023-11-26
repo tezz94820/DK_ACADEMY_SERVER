@@ -15,6 +15,8 @@ export interface IPYQPDF extends Document {
     free: boolean;
     language: string;
     display_priority: string;
+    pdf_solution: Document;
+    total_questions: string;
 }
 
 //schema
@@ -69,6 +71,14 @@ const PYQPDFSchema = new Schema<IPYQPDF>({
     display_priority:{
         type: String,
         required: [true, 'Please enter display_priority'],
+    },
+    pdf_solution:{
+        type: Schema.Types.ObjectId,
+        ref: 'PdfSolution',
+    },
+    total_questions:{
+        type: String,
+        // required: [true, 'Please enter total_questions'],
     }
 }, {timestamps: true})
 

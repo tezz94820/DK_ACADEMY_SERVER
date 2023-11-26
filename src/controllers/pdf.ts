@@ -1,4 +1,5 @@
 import { AuthenticatedRequest } from "../middlewares/auth";
+import PdfSolution from "../models/PdfSolution";
 import PYQPDF, { IPYQPDF } from "../models/PyqPDF";
 import { createFolder, createPresignedUrlByKey } from "../utils/AWSClient";
 import { sendError, sendSuccess } from "../utils/ApiResponse";
@@ -41,6 +42,19 @@ const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
     const newPdfOptions = {title, module, subject, new_launch, thumbnail, class_name, price, old_price, discount, content_link, free, language, display_priority};
     const pdf = await PYQPDF.create(newPdfOptions);
 
+    //create Empty Pdf Solution Document
+    const newPdfSolution = {
+        pyq_pdf: pdf._id,
+        solutions: [],
+    }
+    const pdfSolutionDoc = await PdfSolution.create(newPdfSolution);
+    if(!pdfSolutionDoc)
+        return sendError(res, 400, 'Failed to create pdf solution document', {});
+
+    //update pdf document with pdf_solution id
+    pdf.pdf_solution = pdfSolutionDoc._id;
+    pdf.save();
+
     //craete folder in s3 pyq-pdf folder
     const folderCreated = await createFolder(`pyq-pdf/${pdf._id}/`);
     if(!folderCreated) {
@@ -73,6 +87,38 @@ const getPdfPage = catchAsync(async (req:Request,res:Response):Promise<void> => 
 })
 
 
+const createPdfSolution = catchAsync( async (req:Request, res:Response): Promise<void> => {
+    const { solutions, pdf_id } = req.body;
+    const { command } = req.query; 
+    //new :- replace solutions array 
+    // add :- if new questions then add. 
+    // replace :- . if exists then replace the answer
+
+    const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdf_id}); 
+    let newPdfSolutionDoc;
+    if(command === "new"){
+        newPdfSolutionDoc = await PdfSolution.findByIdAndUpdate(pdfSolutionDoc._id, {solutions} , {new:true});
+    }
+    else if(command === "add"){
+        const newSolutions = pdfSolutionDoc.solutions.concat(solutions);
+        newPdfSolutionDoc = await PdfSolution.findByIdAndUpdate(pdfSolutionDoc._id, {solutions:newSolutions} , {new:true});
+    }
+
+    return sendSuccess(res, 200, 'successful request', {newPdfSolutionDoc});
+
+})
 
 
-export { getPdfBySubject, createPdf, getPdfPage }
+const getpdfSolution = catchAsync( async (req:Request, res:Response): Promise<void> => {
+    const { pdf_id } = req.query;
+
+    const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdf_id});
+    if(!pdfSolutionDoc) {
+        return sendError(res, 400, 'Solutions to Pdf not Found', {});
+    }
+
+    const solutions = pdfSolutionDoc.solutions;
+    return sendSuccess(res, 200, 'successful request', {solutions});
+})
+
+export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution }
