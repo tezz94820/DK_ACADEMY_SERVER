@@ -57,4 +57,11 @@ jobs:
       run: cat .env
     - run: npm ci
     - run: npm run build --if-present
-    - run: pm2 restart src/app.ts --interpreter /home/ubuntu/.nvm/versions/node/v20.9.0/lib/node_modules/ts-node/dist/bin.js --watch
+    - name: Restart or start server with PM2
+      run: |
+        if pm2 restart server; then
+          echo "Server restarted successfully"
+        else
+          echo "Restarting failed. Starting the server instead."
+          pm2 start "npm start" --name=server
+        fi
