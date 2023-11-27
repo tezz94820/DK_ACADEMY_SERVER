@@ -121,4 +121,40 @@ const getpdfSolution = catchAsync( async (req:Request, res:Response): Promise<vo
     return sendSuccess(res, 200, 'successful request', {solutions});
 })
 
-export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution }
+const getPdfByQuestion = catchAsync( async (req:Request, res:Response): Promise<void> => {
+    const { pdf_id:pdfId, question } = req.query;
+    if(!pdfId) return sendError(res, 400, 'please provide pdf_id', {});
+    if(!question) return sendError(res, 400, 'please provide question', {});
+
+    //find the pdf solution doc 
+    const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdfId});
+    if(!pdfSolutionDoc) {
+        return sendError(res, 400, 'Solutions to Pdf not Found', {});
+    }
+    //check if the solution to that doc exists. 
+    let questionExist:boolean = false;
+    pdfSolutionDoc.solutions.forEach( item => {
+        if(item.question === question && item.answer != '' ){
+            questionExist = true; 
+            return;
+        }
+    })
+
+    if(!questionExist){
+        return sendError(res, 400, `Solution to Question ${question} Not Found`, {});
+    }
+
+    //create presigned url for that pdf question number
+    let presignedUrl;
+    try {
+        presignedUrl = await createPresignedUrlByKey(`pyq-pdf/${pdfId}/solutions/${question}.pdf`,20);
+    } catch (error:any) {
+        console.log(error.message)
+        return sendError(res, 400, 'No PDF File Uploaded to AWS S3', {});
+        
+    }
+
+    return sendSuccess(res, 200, 'successful request', {presignedUrl});
+})
+
+export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfByQuestion }

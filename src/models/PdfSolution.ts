@@ -23,7 +23,6 @@ const PdfSolutionSchema = new Schema<IPdfSolution>({
         {
             question: {
                 type: String,
-                unique: true,
                 required: [true, 'Please enter the question number'],
             },
             answer: {
