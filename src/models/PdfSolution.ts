@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model  } from 'mongoose';
 
 //typescript types
 export type SolutionObjectType = {
+    _id: string;
     question: string;
     answer: string;
 } 
@@ -21,6 +22,9 @@ const PdfSolutionSchema = new Schema<IPdfSolution>({
     },
     solutions: [
         {
+            _id: {
+                type: Schema.Types.ObjectId,
+            },
             question: {
                 type: String,
                 required: [true, 'Please enter the question number'],

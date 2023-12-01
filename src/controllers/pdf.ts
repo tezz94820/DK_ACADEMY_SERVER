@@ -134,22 +134,22 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
         return sendError(res, 400, 'Solutions to Pdf not Found', {});
     }
     //check if the solution to that doc exists. 
-    let questionExist:boolean = false;
+    let solutionId:string;
     pdfSolutionDoc.solutions.forEach( item => {
         if(item.question === question && item.answer != '' ){
-            questionExist = true; 
+            solutionId = item._id;
             return;
         }
     })
 
-    if(!questionExist){
+    if(!solutionId){
         return sendError(res, 400, `Solution to Question ${question} Not Found`, {});
     }
 
     //create presigned url for that pdf question number
     let presignedPdfUrl:string, presignedVideoUrl:string;
     try {
-        presignedPdfUrl = await createPresignedUrlByKey(`pyq-pdf/${pdfId}/solutions/${question}.pdf`,3600);
+        presignedPdfUrl = await createPresignedUrlByKey(`pyq-pdf/${pdfId}/solutions/${solutionId}/pdf.pdf`,3600);
     } catch (error:any) {
         console.log(error.message)
         return sendError(res, 400, 'No PDF File Uploaded to AWS S3', {});
@@ -157,7 +157,7 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
 
     //create presigned url for video by question number
     try {
-        presignedVideoUrl = await createPresignedUrlByKey(`pyq-pdf/${pdfId}/videos/${question}.mp4`,3600);
+        presignedVideoUrl = await createPresignedUrlByKey(`pyq-pdf/${pdfId}/solutions/${solutionId}/video.mp4`,3600);
     } catch (error:any) {
         console.log(error.message)
         return sendError(res, 400, 'No Video File Uploaded to AWS S3', {});
