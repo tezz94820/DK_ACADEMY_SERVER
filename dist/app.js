@@ -14,7 +14,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const corsOptions_1 = __importDefault(require("./utils/corsOptions"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
@@ -23,9 +22,17 @@ const connect_1 = __importDefault(require("./db/connect"));
 const app = (0, express_1.default)();
 dotenv_1.default.config();
 //middlewares
-app.use((0, cors_1.default)(corsOptions_1.default));
+app.use((0, cors_1.default)({
+    origin: [
+        'https://dkacademy.co.in',
+        'https://www.dkacademy.co.in',
+        'http://localhost:3000'
+    ],
+    credentials: true,
+    // optionSuccessStatus:200,
+}));
 app.use((0, helmet_1.default)());
-app.use(express_1.default.json({ limit: '10kb' })); //body data to json
+app.use(express_1.default.json({ limit: '20kb' })); //body data to json
 app.use(express_1.default.urlencoded({ extended: true, limit: '10kb' })); //urlencoded data
 //development middlewares
 if (process.env.NODE_ENV === 'development') {
