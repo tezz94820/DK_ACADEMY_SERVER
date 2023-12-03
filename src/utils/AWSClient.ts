@@ -49,6 +49,7 @@ export const uploadFileToFolderInS3 = async (file: Express.Multer.File, key: str
         Key: key,
         Body: bufferStream,
         ContentType: file.mimetype,
+        
       };
   
       // const command = new PutObjectCommand(params);
