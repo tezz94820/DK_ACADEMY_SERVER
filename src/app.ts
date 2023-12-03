@@ -1,6 +1,5 @@
 import express from 'express';
 import env from 'dotenv';
-import corsOptions from './utils/corsOptions';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
