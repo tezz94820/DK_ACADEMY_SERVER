@@ -10,7 +10,15 @@ const app = express();
 env.config();
 
 //middlewares
-app.use(cors(corsOptions));
+app.use(cors({
+    origin: [
+        'https://dkacademy.co.in',
+        'https://www.dkacademy.co.in',
+        'http://localhost:3000'
+    ],
+    credentials:true,
+    // optionSuccessStatus:200,
+}));
 app.use(helmet());
 app.use(express.json({ limit: '20kb' })); //body data to json
 app.use(express.urlencoded({ extended: true, limit: '10kb' })); //urlencoded data
