@@ -1,7 +1,7 @@
 import { AuthenticatedRequest } from "../middlewares/auth";
 import PdfSolution from "../models/PdfSolution";
 import PYQPDF, { IPYQPDF } from "../models/PyqPDF";
-import { createFolder, createPresignedUrlByKey } from "../utils/AWSClient";
+import { createFolder, createPresignedUrlByKey, uploadFileToFolderInS3 } from "../utils/AWSClient";
 import { sendError, sendSuccess } from "../utils/ApiResponse";
 import catchAsync from "../utils/catchAsync";
 import { Request, Response } from 'express';
@@ -127,7 +127,7 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
     const { pdf_id:pdfId, question } = req.query;
     if(!pdfId) return sendError(res, 400, 'please provide pdf_id', {});
     if(!question) return sendError(res, 400, 'please provide question', {});
-
+    
     //find the pdf solution doc 
     const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdfId});
     if(!pdfSolutionDoc) {
@@ -167,6 +167,54 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
 })
 
 
+const uploadSolutionContent = catchAsync( async (req:Request, res:Response): Promise<void> => {
+    const { pdf_id:pdfId, question } = req.query;
+    if(!pdfId) return sendError(res, 400, 'please provide pdf_id', {});
+    if(!question) return sendError(res, 400, 'please provide question', {});
+    
+    const { pdf, video } = req.files as { pdf?: Express.Multer.File[], video?: Express.Multer.File[] };
+
+    //find the pdf solution doc 
+    const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdfId});
+    if(!pdfSolutionDoc) {
+        return sendError(res, 400, 'Solutions to Pdf not Found', {});
+    }
+
+    //get the solutionID. 
+    let solutionId:string;
+    pdfSolutionDoc.solutions.forEach( item => {
+        if(item.question === question && item.answer != '' ){
+            solutionId = item._id;
+            return;
+        }
+    })
+
+    //craete folder in s3 pyq-pdf folder
+    const folderCreated = await createFolder(`pyq-pdf/${pdfId}/solutions/${solutionId}/`);
+    if(!folderCreated) {
+        return sendError(res, 400, 'Failed to create folder in s3 of curretn pdf', {});
+    }
+
+    let videoUploaded = false;
+    let pdfUploaded = false;
+
+    //upload PDF
+    if(pdf){
+        const uploadedPdf = await uploadFileToFolderInS3( pdf[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/pdf.pdf` );
+        if(!uploadedPdf)  return sendError(res, 400, 'Failed to upload PDF to s3', {});
+        pdfUploaded = true;
+    }
+    
+    //upload Video
+    if(video){
+        const uploadedVideo = await uploadFileToFolderInS3( video[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/video.mp4` );
+        if(!uploadedVideo)  return sendError(res, 400, 'Failed to upload Video to s3', {});
+        videoUploaded = true;
+    }
+
+    return sendSuccess(res, 200, `successful Uploaded ${videoUploaded?'Video':''} ${videoUploaded && pdfUploaded ? 'and':''} ${pdfUploaded?'PDF':''} to particular  solutions folder ${solutionId}`, {});
+})
 
 
-export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion }
+
+export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion, uploadSolutionContent }
