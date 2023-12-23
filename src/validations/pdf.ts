@@ -45,6 +45,9 @@ const createPdfValidationSchema = Joi.object({
     "any.required": "display_priority is required.",
     "string.empty": "display_priority cannot be empty.",
   }),
+  exam_type: Joi.string().messages({
+    "string.base": "exam_type must be a string value.",
+  })
 });
 
 

@@ -14,8 +14,10 @@ const getPdfBySubject = catchAsync(async (req:AuthenticatedRequest,res:Response)
     if(['mathematics','physics','chemistry'].includes(subject) === false){
         return sendError(res, 400, 'Invalid subject', {});
     }
+    let {exam_type : examType}:{exam_type?: string} = req.query;
+    examType = examType.toLowerCase();
     
-    const allPdf = await PYQPDF.find({ subject: { $regex: new RegExp(subject, 'i') } }).sort({displayPriorities: 1});
+    const allPdf = await PYQPDF.find({ subject: { $regex: new RegExp(subject, 'i') }, exam_type: { $regex: new RegExp(examType, 'i') } }).sort({displayPriorities: 1});
     //segregate pdfs by module
     const modules = Array.from(new Set(allPdf.map( item => item.module)));
     let pdfModuleswise = modules.map( module => {
@@ -33,13 +35,13 @@ const getPdfBySubject = catchAsync(async (req:AuthenticatedRequest,res:Response)
 })
 
 const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
-    const { title, module, subject, new_launch=true, thumbnail, class_name, price, old_price, content_link="not present still", free=false, language="English", display_priority } = req.body;
+    const { title, module, subject, new_launch=true, thumbnail, class_name, price, old_price, content_link="not present still", free=false, language="English", display_priority,exam_type } = req.body;
     
     //calculate discount
     const discount = Math.round((Number(old_price) - Number(price)) / Number(old_price) * 100).toString();
 
     //create pdf
-    const newPdfOptions = {title, module, subject, new_launch, thumbnail, class_name, price, old_price, discount, content_link, free, language, display_priority};
+    const newPdfOptions = {title, module, subject, new_launch, thumbnail, class_name, price, old_price, discount, content_link, free, language, display_priority, exam_type};
     const pdf = await PYQPDF.create(newPdfOptions);
 
     //create Empty Pdf Solution Document
@@ -55,8 +57,8 @@ const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
     pdf.pdf_solution = pdfSolutionDoc._id;
     pdf.save();
 
-    //craete folder in s3 pyq-pdf folder
-    const folderCreated = await createFolder(`pyq-pdf/${pdf._id}/`);
+    //create folder in s3 pyq-pdf folder
+    const folderCreated = await createFolder(`pyq-pdf/${pdf.exam_type}/${pdf._id}/`);
     if(!folderCreated) {
         return sendError(res, 400, 'Failed to create folder in s3 of curretn pdf', {});
     }
@@ -65,9 +67,12 @@ const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
 
 
 const getPdfPage = catchAsync(async (req:Request,res:Response):Promise<void> => {
-    const { pdf_id } = req.query;
+    const { pdf_id, exam_type } = req.query;
     if(!pdf_id){
         return sendError(res, 401, "please send the pdf_id",{});
+    }
+    if(!exam_type){
+        return sendError(res, 401, "please send the exam_type",{});
     }
 
     //give the pdf if it's free
@@ -76,7 +81,7 @@ const getPdfPage = catchAsync(async (req:Request,res:Response):Promise<void> => 
         return sendError(res, 400, 'No PDF Found', pdf);
     if(pdf.free){
         // create a pre signed url for the user
-        const presignedUrl = await createPresignedUrlByKey(`pyq-pdf/${pdf._id}/pdf.pdf`,20);
+        const presignedUrl = await createPresignedUrlByKey(`pyq-pdf/${exam_type}/${pdf._id}/pdf.pdf`,20);
         //send the presigned url to user
         return sendSuccess(res, 200, 'successful request', {presignedUrl});
     }

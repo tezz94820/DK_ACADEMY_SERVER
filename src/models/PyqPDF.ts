@@ -17,13 +17,13 @@ export interface IPYQPDF extends Document {
     display_priority: string;
     pdf_solution: Document;
     total_questions: string;
+    exam_type: string;
 }
 
 //schema
 const PYQPDFSchema = new Schema<IPYQPDF>({
     title: {
         type: String,
-        unique: true,
         required: [true, 'Please enter the title'],
     },
     module: {
@@ -79,8 +79,16 @@ const PYQPDFSchema = new Schema<IPYQPDF>({
     total_questions:{
         type: String,
         // required: [true, 'Please enter total_questions'],
+    },
+    exam_type: {
+        type: String,
+        enum: ["advance","mains"],
+        default: "mains"
     }
 }, {timestamps: true})
+
+// Compound unique index on title and exam_type
+PYQPDFSchema.index({ title: 1, exam_type: 1 }, { unique: true });
 
 // model
 const PYQPDF = mongoose.model<IPYQPDF>('PyqPDF', PYQPDFSchema);
