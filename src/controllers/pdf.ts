@@ -132,6 +132,9 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
     const { pdf_id:pdfId, question } = req.query;
     if(!pdfId) return sendError(res, 400, 'please provide pdf_id', {});
     if(!question) return sendError(res, 400, 'please provide question', {});
+
+    //find the pyqPdf model course to get the exam_type
+    const {exam_type : examType} = await PYQPDF.findById(pdfId).select('exam_type');
     
     //find the pdf solution doc 
     const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdfId});
@@ -154,7 +157,7 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
     //create presigned url for that pdf question number
     let presignedPdfUrl:string, presignedVideoUrl:string;
     try {
-        presignedPdfUrl = await createPresignedUrlByKey(`pyq-pdf/${pdfId}/solutions/${solutionId}/pdf.pdf`,3600);
+        presignedPdfUrl = await createPresignedUrlByKey(`pyq-pdf/${examType}/${pdfId}/solutions/${solutionId}/pdf.pdf`,3600);
     } catch (error:any) {
         console.log(error.message)
         return sendError(res, 400, 'No PDF File Uploaded to AWS S3', {});
@@ -162,7 +165,7 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
 
     //create presigned url for video by question number
     try {
-        presignedVideoUrl = await createPresignedUrlByKey(`pyq-pdf/${pdfId}/solutions/${solutionId}/video.mp4`,3600);
+        presignedVideoUrl = await createPresignedUrlByKey(`pyq-pdf/${examType}/${pdfId}/solutions/${solutionId}/video.mp4`,3600);
     } catch (error:any) {
         console.log(error.message)
         return sendError(res, 400, 'No Video File Uploaded to AWS S3', {});
