@@ -4,6 +4,8 @@ import { validateAsSchema } from '../middlewares/validation';
 import { createPdfValidationSchema } from '../validations/pdf';
 import { Protect } from '../middlewares/auth';
 import { upload } from '../middlewares/multer';
+import { createNewTest } from '../controllers/test';
+import { createTestValidationSchema } from '../validations/tests';
 
 
 const router = express.Router();
@@ -16,6 +18,7 @@ const multer = upload.fields([
 router.post('/pyq-pdf', Protect, validateAsSchema(createPdfValidationSchema), createPdf);
 router.post('/create-pdf-solution', Protect, createPdfSolution);
 router.post('/upload-solution', Protect, multer, uploadSolutionContent);
+router.post('/create-test', Protect, validateAsSchema(createTestValidationSchema), createNewTest);
 
 
 export default router;  

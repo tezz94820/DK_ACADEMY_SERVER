@@ -18,6 +18,8 @@ export interface IPYQPDF extends Document {
     pdf_solution: Document;
     total_questions: string;
     exam_type: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 //schema
