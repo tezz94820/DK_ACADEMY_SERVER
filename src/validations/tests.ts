@@ -41,3 +41,19 @@ export const createTestValidationSchema = Joi.object({
         "boolean.base": 'The free field must be a boolean value',
     }),
 });
+
+export const OptionWithUserInteractionSchema = Joi.object({
+  test_attempt_id: Joi.string().required().messages({
+    "any.required": "test attempt id is required.",
+    "string.empty": "test attempt id cannot be empty.",
+  }),
+  question_number: Joi.string().required().messages({
+    "any.required": "question number is required.",
+    "string.empty": "question number cannot be empty.",
+  }),
+  option: Joi.string().allow(''),
+  user_interaction: Joi.string().required().messages({
+    "any.required": "user interaction is required.",
+    "string.empty": "user interaction cannot be empty.",
+  })
+}) 

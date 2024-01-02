@@ -24,6 +24,8 @@ interface IQuestion extends Document {
     question_type: string;
     question: string;
     question_pattern: string;
+    question_number: string;
+    question_subject: string;
     options: IOption[];
 }
 
@@ -33,10 +35,22 @@ const QuestionSchema = new Schema<IQuestion>({
         type: String,
         enum: ['text', 'img'],
     },
-    question: String,
+    question: {
+        type: String,
+        required: [true, 'please provide question text/url'],
+    },
     question_pattern: {
         type: String,
         enum: ['numerical', 'mcq'],
+    },
+    question_number: {
+        type: String,
+        required: [true, 'please provide question number'],
+    },
+    question_subject:{
+        type: String,
+        enum: ['physics', 'chemistry', 'mathematics'],
+        required: [true, 'please provide subject of question number'],
     },
     options: [OptionSchema],
 });

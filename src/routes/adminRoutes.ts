@@ -4,7 +4,7 @@ import { validateAsSchema } from '../middlewares/validation';
 import { createPdfValidationSchema } from '../validations/pdf';
 import { Protect } from '../middlewares/auth';
 import { upload } from '../middlewares/multer';
-import { createNewTest } from '../controllers/test';
+import { createNewTest, createTestQuestions } from '../controllers/test';
 import { createTestValidationSchema } from '../validations/tests';
 
 
@@ -19,6 +19,8 @@ router.post('/pyq-pdf', Protect, validateAsSchema(createPdfValidationSchema), cr
 router.post('/create-pdf-solution', Protect, createPdfSolution);
 router.post('/upload-solution', Protect, multer, uploadSolutionContent);
 router.post('/create-test', Protect, validateAsSchema(createTestValidationSchema), createNewTest);
+router.post('/create-test-questions/:id', Protect, createTestQuestions);
+
 
 
 export default router;  

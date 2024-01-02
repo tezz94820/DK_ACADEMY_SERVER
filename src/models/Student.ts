@@ -18,6 +18,7 @@ export interface IStudentInput {
 export interface IStudent extends IStudentInput,Document {
     OtpAttemptCount: string;
     lastOtpRequestTime: Date;
+    testAttempts: Schema.Types.ObjectId[];
 }
 
 interface IStudentMethods {
@@ -78,6 +79,10 @@ const StudentSchema = new Schema<IStudent, StudentModel, IStudentMethods>({
     },
     lastOtpRequestTime: {
         type: Date
+    },
+    testAttempts:{
+        type: [Schema.Types.ObjectId],
+        ref: 'TestAttempt'
     }
 }, {timestamps: true})
 

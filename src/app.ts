@@ -19,8 +19,8 @@ app.use(cors({
     // optionSuccessStatus:200,
 }));
 app.use(helmet());
-app.use(express.json({ limit: '20kb' })); //body data to json
-app.use(express.urlencoded({ extended: true, limit: '10kb' })); //urlencoded data
+app.use(express.json({ limit: '100kb' })); //body data to json
+app.use(express.urlencoded({ extended: true, limit: '100kb' })); //urlencoded data
 //development middlewares
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
