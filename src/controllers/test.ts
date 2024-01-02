@@ -240,5 +240,29 @@ const getSelectedOptionByQuestionNumber = catchAsync(async (req:AuthenticatedReq
 })
 
 
+const getQuestionStates = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const testAttemptId = req.params?.test_attempt_id;
+    if(!testAttemptId){
+        return sendError(res, 400, 'Please provide test attempt  id', {});
+    }
+
+    const testAttemptDetails = await TestAttempt.findById(testAttemptId).lean(true);
+    if(!testAttemptDetails){
+        return sendError(res, 400, 'Test Attempt Not Found', {});
+    }
+
+    const questionStates = testAttemptDetails.questions.map( question => {
+        return {
+            question_number: question.question_number,
+            user_interaction: question.user_interaction
+        }
+    })
+    
+
+    return sendSuccess(res, 200, 'Successful request', {question_states:questionStates} );
+})
+
+
+
 export { createNewTest, getTestListTypeWise, getTestDetailsById, getTestStartDetailsById, createTestQuestions, getTestQuestion, getTestAttemptRegistry,
-    OptionWithUserInteraction, getSelectedOptionByQuestionNumber }
+    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates }
