@@ -251,15 +251,28 @@ const getQuestionStates = catchAsync(async (req:AuthenticatedRequest,res:Respons
         return sendError(res, 400, 'Test Attempt Not Found', {});
     }
 
+    const questionInteractionAnalysis = {
+        ['not-visited']:0,
+        ['answered']:0,
+        ['not-answered']:0,
+        ['marked']:0,
+        ['marked-answered']:0
+    }
     const questionStates = testAttemptDetails.questions.map( question => {
+        questionInteractionAnalysis[question.user_interaction]++;
         return {
             question_number: question.question_number,
             user_interaction: question.user_interaction
         }
     })
+    //converting it to string
+    Object.keys(questionInteractionAnalysis).forEach((key) => {
+        questionInteractionAnalysis[key] = questionInteractionAnalysis[key].toString();
+    });
+    
     
 
-    return sendSuccess(res, 200, 'Successful request', {question_states:questionStates} );
+    return sendSuccess(res, 200, 'Successful request', {question_states:questionStates,question_interaction_analysis:questionInteractionAnalysis} );
 })
 
 
