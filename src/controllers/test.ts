@@ -72,49 +72,51 @@ const getTestStartDetailsById = catchAsync(async (req:AuthenticatedRequest,res:R
     interface ITestWithTabDetails extends ITest {
         total_questions: string;
         tabDetails: {
-            physics: string;
-            physics_numeric: string;
-            chemistry: string;
-            chemistry_numeric: string;
-            mathematics: string;
-            mathematics_numeric: string;
+            ['PHYSICS']: string;
+            ['PHYSICS NUMERIC']: string;
+            ['CHEMISTRY']: string;
+            ['CHEMISTRY NUMERIC']: string;
+            ['MATHEMATICS']: string;
+            ['MATHEMATICS NUMERIC']: string;
         };
     }
     
 
     const testDetails:ITestWithTabDetails = await Test.findById(id).select({title:1,type:1,duration:1,questions:1}).lean(true);
-    
+    if(!testDetails){
+        return sendError(res, 400, 'Test not found', {});
+    }
     //saving the first question in particular tab in flt test
     testDetails.tabDetails = {
-        physics: '10000',
-        physics_numeric: '10000',
-        chemistry: '10000',
-        chemistry_numeric: '10000',
-        mathematics: '10000',
-        mathematics_numeric: '10000',
+        ['PHYSICS']: '10000',
+        ['PHYSICS NUMERIC']: '10000',
+        ['CHEMISTRY']: '10000',
+        ['CHEMISTRY NUMERIC']: '10000',
+        ['MATHEMATICS']: '10000',
+        ['MATHEMATICS NUMERIC']: '10000'
     }
     if(testDetails.type === 'flt'){
         testDetails.questions.forEach( question => {
             if(question.question_pattern === 'mcq'){
                 if(question.question_subject === 'physics'){
-                    testDetails.tabDetails.physics = Math.min(Number(testDetails.tabDetails.physics),Number(question.question_number)).toString();
+                    testDetails.tabDetails['PHYSICS'] = Math.min(Number(testDetails.tabDetails['PHYSICS']),Number(question.question_number)).toString();
                 }
                 else if(question.question_subject === 'chemistry'){
-                    testDetails.tabDetails.chemistry = Math.min(Number(testDetails.tabDetails.chemistry),Number(question.question_number)).toString();
+                    testDetails.tabDetails['CHEMISTRY'] = Math.min(Number(testDetails.tabDetails['CHEMISTRY']),Number(question.question_number)).toString();
                 }
                 else if(question.question_subject === 'mathematics'){
-                    testDetails.tabDetails.mathematics = Math.min(Number(testDetails.tabDetails.mathematics),Number(question.question_number)).toString();
+                    testDetails.tabDetails['MATHEMATICS'] = Math.min(Number(testDetails.tabDetails['MATHEMATICS']),Number(question.question_number)).toString();
                 }
             }
             else if(question.question_pattern === 'numerical'){
                 if(question.question_subject === 'physics'){
-                    testDetails.tabDetails.physics_numeric = Math.min(Number(testDetails.tabDetails.physics_numeric),Number(question.question_number)).toString();
+                    testDetails.tabDetails['PHYSICS NUMERIC'] = Math.min(Number(testDetails.tabDetails['PHYSICS NUMERIC']),Number(question.question_number)).toString();
                 }
                 else if(question.question_subject === 'chemistry'){
-                    testDetails.tabDetails.chemistry_numeric = Math.min(Number(testDetails.tabDetails.chemistry_numeric),Number(question.question_number)).toString();
+                    testDetails.tabDetails['CHEMISTRY NUMERIC'] = Math.min(Number(testDetails.tabDetails['CHEMISTRY NUMERIC']),Number(question.question_number)).toString();
                 }
                 else if(question.question_subject === 'mathematics'){
-                    testDetails.tabDetails.mathematics_numeric = Math.min(Number(testDetails.tabDetails.mathematics_numeric),Number(question.question_number)).toString();
+                    testDetails.tabDetails['MATHEMATICS NUMERIC'] = Math.min(Number(testDetails.tabDetails['MATHEMATICS NUMERIC']),Number(question.question_number)).toString();
                 }
             } 
         })    
