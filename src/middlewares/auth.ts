@@ -29,8 +29,14 @@ const Protect =  catchAsync( async (req: AuthenticatedRequest, res: Response, ne
         req.user = user;
         next();
     } catch (error) {
-        sendError(res, 401, 'Access Token not valid', {});
+        return sendError(res, 401, 'Access Token not valid', {});
     }
 });
 
-export { Protect };
+const adminProtect = catchAsync( async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    if(!['7972142271','7982463088'].includes(req.user.phone))
+        return sendError(res, 401, 'You are not authorized to access this route', {});
+    next();
+})
+
+export { Protect, adminProtect };

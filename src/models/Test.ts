@@ -68,6 +68,7 @@ export interface ITest extends Document {
     total_marks: string;
     free: boolean;
     questions: IQuestion[];
+    correct_options: [];
 }
 
 const TestSchema = new Schema<ITest>({
@@ -112,6 +113,12 @@ const TestSchema = new Schema<ITest>({
         required: [true, 'please provide free status'],
     },
     questions: [QuestionSchema],
+    correct_options:[
+        {
+            question_number: String,
+            correct_option: String
+        }
+    ]
 }, { timestamps: true });
 
 // Test model

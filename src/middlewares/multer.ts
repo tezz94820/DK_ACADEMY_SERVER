@@ -11,12 +11,13 @@ const upload:Multer = multer({
     },
     fileFilter: (req, file, cb) => {
       // Add file type validation here if needed
-      if (file.mimetype.startsWith('application/pdf') || file.mimetype.startsWith('video/')) {
+      if (file.mimetype.startsWith('application/pdf') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
         cb(null, true);
       } else {
         cb(null, false);
       }
     },
+
   });
 
 export { upload };

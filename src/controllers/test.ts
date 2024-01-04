@@ -5,25 +5,39 @@ import { Request, Response } from 'express';
 import Test, { ITest } from "../models/Test";
 import TestAttempt from "../models/TestAttempt.";
 import mongoose from "mongoose";
+import { createFolder, uploadFileToFolderInS3 } from "../utils/AWSClient";
 
 const setDateFormat = (date:string):string => {
     let newDate = new Date(date).toLocaleString('en-IN'); 
-    newDate = newDate.replace(/\//g, '-').split(',')[0];
+    let [day, month, year] = newDate.split(',')[0].split('/');
+    newDate = `${Number(day)<10 ? `0${day}` : day }-${Number(month)<10 ? `0${month}` : month }-${year}`;
     return newDate;
-  }
-
+}
 
 const createNewTest = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
-    let { title, type, thumbnail, start_date, end_date, start_time, end_time, duration, total_marks, free } = req.body;
+    let { title, type, start_date, end_date, start_time, end_time, duration, total_marks, free } = req.body;
+    const { thumbnail } = req.files as { thumbnail?: Express.Multer.File[] };
     
-    //initially fix this date until set from frontend
-    start_date = new Date();
-    end_date = new Date();
+    // creating new test document
+    const test = await Test.create({title, type, start_date, end_date, start_time, end_time, duration, total_marks, free});
+    
+    //craete folder in s3 tests folder
+    const folderCreated = await createFolder(`tests/${test._id}/`);
+    if(!folderCreated) {
+        return sendError(res, 400, 'Failed to create folder in s3 of current test', {});
+    }
 
-    //creating new test document
-    const test = await Test.create({title, type, thumbnail, start_date, end_date, start_time, end_time, duration, total_marks, free});
-    
-    return sendSuccess(res, 200, 'Successful request', test );
+    //save the thumbnail in the newly created folder
+    const uploadedImage = await uploadFileToFolderInS3( thumbnail[0], `tests/${test._id}/thumbnail.png` );
+    if(!uploadedImage) {
+        return sendError(res, 400, 'Failed to upload Thumbnail to s3', {});
+    }
+
+    //update the url of thumbnail in db
+    test.thumbnail = `tests/${test._id}/thumbnail.png`;
+    test.save();
+
+    return sendSuccess(res, 200, 'Successful request', "success" );
 })
 
 const getTestListTypeWise = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
@@ -278,6 +292,38 @@ const getQuestionStates = catchAsync(async (req:AuthenticatedRequest,res:Respons
 })
 
 
+const editTestDetails = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const testId = req.params?.id;
+    if(!testId){
+        return sendError(res, 400, 'Please provide test id', {});
+    }
+
+    const { title, type, start_date, end_date, start_time, end_time, duration, total_marks } = req.body;
+    //will include the content to be edited in the db.
+    const contentToChange = { title, type, start_date, end_date, start_time, end_time, duration, total_marks };
+    for( let item in contentToChange){
+        if(!contentToChange[item]){
+            delete contentToChange[item];
+        }
+    }
+
+    //updating in the db
+    const test = await Test.findByIdAndUpdate(testId, contentToChange);
+    if(!test){
+        return sendError(res, 400, 'Test Not Found', {});
+    }
+
+    //updating the thumbnail image in aws s3
+    const { thumbnail } = req.files as { thumbnail?: Express.Multer.File[] };
+    if(thumbnail){
+        const uploadedImage = await uploadFileToFolderInS3( thumbnail[0], `tests/${testId}/thumbnail.png` );
+        if(!uploadedImage) {
+            return sendError(res, 400, 'Failed to upload Thumbnail to s3', {});
+        }
+    }
+
+    return sendSuccess(res, 200, 'Successful request', "Update Successfull" );
+})
 
 export { createNewTest, getTestListTypeWise, getTestDetailsById, getTestStartDetailsById, createTestQuestions, getTestQuestion, getTestAttemptRegistry,
-    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates }
+    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails }

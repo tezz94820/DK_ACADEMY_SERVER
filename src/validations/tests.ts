@@ -9,10 +9,7 @@ export const createTestValidationSchema = Joi.object({
       "any.required": "type is required.",
       "string.empty": "type cannot be empty.",
     }),
-    thumbnail: Joi.string().required().messages({
-      "any.required": "thumbnail is required.",
-      "string.empty": "thumbnail cannot be empty.",
-    }),
+    thumbnail: Joi.any(),
     start_date: Joi.string().required().messages({
         "any.required": "start date is required.",
         "string.empty": "start date cannot be empty.",
