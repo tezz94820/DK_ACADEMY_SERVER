@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import Test, { ITest } from "../models/Test";
 import TestAttempt from "../models/TestAttempt.";
 import mongoose from "mongoose";
-import { createFolder, uploadFileToFolderInS3 } from "../utils/AWSClient";
+import { createFolder, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
 
 const setDateFormat = (date:string):string => {
     let newDate = new Date(date).toLocaleString('en-IN'); 
@@ -22,19 +22,20 @@ const createNewTest = catchAsync(async (req:AuthenticatedRequest,res:Response):P
     const test = await Test.create({title, type, start_date, end_date, start_time, end_time, duration, total_marks, free});
     
     //craete folder in s3 tests folder
-    const folderCreated = await createFolder(`tests/${test._id}/`);
+    const folderCreated = await createFolder('public',`tests/${test._id}/`);
     if(!folderCreated) {
         return sendError(res, 400, 'Failed to create folder in s3 of current test', {});
     }
 
     //save the thumbnail in the newly created folder
-    const uploadedImage = await uploadFileToFolderInS3( thumbnail[0], `tests/${test._id}/thumbnail.png` );
+    const thumbnailKey = `tests/${test._id}/thumbnail.png`;
+    const uploadedImage = await uploadFileToFolderInS3('public', thumbnail[0], thumbnailKey );
     if(!uploadedImage) {
         return sendError(res, 400, 'Failed to upload Thumbnail to s3', {});
     }
 
     //update the url of thumbnail in db
-    test.thumbnail = `tests/${test._id}/thumbnail.png`;
+    test.thumbnail = publicBaseUrl(thumbnailKey);
     test.save();
 
     return sendSuccess(res, 200, 'Successful request', "success" );
@@ -315,8 +316,9 @@ const editTestDetails = catchAsync(async (req:AuthenticatedRequest,res:Response)
 
     //updating the thumbnail image in aws s3
     const { thumbnail } = req.files as { thumbnail?: Express.Multer.File[] };
+    console.log(thumbnail);
     if(thumbnail){
-        const uploadedImage = await uploadFileToFolderInS3( thumbnail[0], `tests/${testId}/thumbnail.png` );
+        const uploadedImage = await uploadFileToFolderInS3('public', thumbnail[0], `tests/${testId}/thumbnail.png` );
         if(!uploadedImage) {
             return sendError(res, 400, 'Failed to upload Thumbnail to s3', {});
         }
@@ -325,5 +327,28 @@ const editTestDetails = catchAsync(async (req:AuthenticatedRequest,res:Response)
     return sendSuccess(res, 200, 'Successful request', "Update Successfull" );
 })
 
+
+
+const deleteTest = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const testId = req.params?.id;
+    if(!testId){
+        return sendError(res, 400, 'Please provide test id', {});
+    }
+
+    // delete the Test from db
+    const test = await Test.findByIdAndDelete(testId);
+    if(!test){
+        return sendError(res, 400, 'Test Not Found', {});
+    }
+
+    //delete the thumbnail and questions from the AWS S3 bucket
+    await deleteObjectByKey('public',`tests/${test._id}/thumbnail.png`); 
+
+    return sendSuccess(res, 200, 'Successful request', "delete Successfull" );
+})
+
+
+
+
 export { createNewTest, getTestListTypeWise, getTestDetailsById, getTestStartDetailsById, createTestQuestions, getTestQuestion, getTestAttemptRegistry,
-    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails }
+    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest }

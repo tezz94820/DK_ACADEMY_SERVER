@@ -58,7 +58,7 @@ const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
     pdf.save();
 
     //create folder in s3 pyq-pdf folder
-    const folderCreated = await createFolder(`pyq-pdf/${pdf.exam_type}/${pdf._id}/`);
+    const folderCreated = await createFolder('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/`);
     if(!folderCreated) {
         return sendError(res, 400, 'Failed to create folder in s3 of curretn pdf', {});
     }
@@ -81,7 +81,7 @@ const getPdfPage = catchAsync(async (req:Request,res:Response):Promise<void> => 
         return sendError(res, 400, 'No PDF Found', pdf);
     if(pdf.free){
         // create a pre signed url for the user
-        const presignedUrl = await createPresignedUrlByKey(`pyq-pdf/${exam_type}/${pdf._id}/pdf.pdf`,20);
+        const presignedUrl = await createPresignedUrlByKey('private',`pyq-pdf/${exam_type}/${pdf._id}/pdf.pdf`,20);
         //send the presigned url to user
         return sendSuccess(res, 200, 'successful request', {presignedUrl});
     }
@@ -157,7 +157,7 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
     //create presigned url for that pdf question number
     let presignedPdfUrl:string, presignedVideoUrl:string;
     try {
-        presignedPdfUrl = await createPresignedUrlByKey(`pyq-pdf/${examType}/${pdfId}/solutions/${solutionId}/pdf.pdf`,3600);
+        presignedPdfUrl = await createPresignedUrlByKey('private',`pyq-pdf/${examType}/${pdfId}/solutions/${solutionId}/pdf.pdf`,3600);
     } catch (error:any) {
         console.log(error.message)
         return sendError(res, 400, 'No PDF File Uploaded to AWS S3', {});
@@ -165,7 +165,7 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
 
     //create presigned url for video by question number
     try {
-        presignedVideoUrl = await createPresignedUrlByKey(`pyq-pdf/${examType}/${pdfId}/solutions/${solutionId}/video.mp4`,3600);
+        presignedVideoUrl = await createPresignedUrlByKey('private',`pyq-pdf/${examType}/${pdfId}/solutions/${solutionId}/video.mp4`,3600);
     } catch (error:any) {
         console.log(error.message)
         return sendError(res, 400, 'No Video File Uploaded to AWS S3', {});
@@ -198,7 +198,7 @@ const uploadSolutionContent = catchAsync( async (req:Request, res:Response): Pro
     })
 
     //craete folder in s3 pyq-pdf folder
-    const folderCreated = await createFolder(`pyq-pdf/${pdfId}/solutions/${solutionId}/`);
+    const folderCreated = await createFolder('private',`pyq-pdf/${pdfId}/solutions/${solutionId}/`);
     if(!folderCreated) {
         return sendError(res, 400, 'Failed to create folder in s3 of curretn pdf', {});
     }
@@ -208,14 +208,14 @@ const uploadSolutionContent = catchAsync( async (req:Request, res:Response): Pro
 
     //upload PDF
     if(pdf){
-        const uploadedPdf = await uploadFileToFolderInS3( pdf[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/pdf.pdf` );
+        const uploadedPdf = await uploadFileToFolderInS3('private', pdf[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/pdf.pdf` );
         if(!uploadedPdf)  return sendError(res, 400, 'Failed to upload PDF to s3', {});
         pdfUploaded = true;
     }
     
     //upload Video
     if(video){
-        const uploadedVideo = await uploadFileToFolderInS3( video[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/video.mp4` );
+        const uploadedVideo = await uploadFileToFolderInS3('private', video[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/video.mp4` );
         if(!uploadedVideo)  return sendError(res, 400, 'Failed to upload Video to s3', {});
         videoUploaded = true;
     }

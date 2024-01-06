@@ -4,7 +4,7 @@ import { validateAsSchema } from '../middlewares/validation';
 import { createPdfValidationSchema } from '../validations/pdf';
 import { Protect, adminProtect } from '../middlewares/auth';
 import { upload } from '../middlewares/multer';
-import { createNewTest, createTestQuestions, editTestDetails } from '../controllers/test';
+import { createNewTest, createTestQuestions, deleteTest, editTestDetails } from '../controllers/test';
 import { createTestValidationSchema } from '../validations/tests';
 
 
@@ -24,6 +24,7 @@ router.post('/create-pdf-solution', Protect, createPdfSolution);
 router.post('/upload-solution', Protect, multer, uploadSolutionContent);
 router.post('/create-test', Protect, adminProtect, multerTest, validateAsSchema(createTestValidationSchema), createNewTest);
 router.post('/edit-test/:id', Protect, adminProtect,multerTest, editTestDetails);
+router.delete('/delete-test/:id', Protect, adminProtect, deleteTest);
 router.post('/create-test-questions/:id', Protect, createTestQuestions);
 
 
