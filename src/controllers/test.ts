@@ -2,7 +2,7 @@ import { sendError, sendSuccess } from "../utils/ApiResponse";
 import catchAsync from "../utils/catchAsync";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { Request, Response } from 'express';
-import Test, { ITest } from "../models/Test";
+import Test, { IQuestion, ITest } from "../models/Test";
 import TestAttempt from "../models/TestAttempt.";
 import mongoose from "mongoose";
 import { createFolder, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
@@ -167,8 +167,19 @@ const getTestQuestion = catchAsync(async (req:AuthenticatedRequest,res:Response)
         return sendError(res, 400, 'Please provide question number', {});
     }
 
+    //search for the test
     const testDetails = await Test.findById(testId).select({questions:1});
-    const question = testDetails.questions.filter( item => item.question_number === questionNumber);
+    if(!testDetails){
+        return sendError(res, 400, 'Test Not Found', {});
+    }
+    
+    let question; 
+    for( const item of testDetails.questions){
+        if(item.question_number === questionNumber){
+            question = item;
+            break;
+        }
+    }
 
     return sendSuccess(res, 200, 'Successful request', question );
 })

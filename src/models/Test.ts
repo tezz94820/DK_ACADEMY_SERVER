@@ -19,7 +19,7 @@ const OptionSchema = new Schema<IOption>({
 });
 
 // Question schema
-interface IQuestion extends Document {
+export interface IQuestion extends Document {
     question_id: string;
     question_type: string;
     question: string;
