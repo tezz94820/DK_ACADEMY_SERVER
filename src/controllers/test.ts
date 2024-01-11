@@ -2,7 +2,7 @@ import { sendError, sendSuccess } from "../utils/ApiResponse";
 import catchAsync from "../utils/catchAsync";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { Request, Response } from 'express';
-import Test, { IQuestion, ITest } from "../models/Test";
+import Test, { ICorrectOptions, IQuestion, ITest } from "../models/Test";
 import TestAttempt from "../models/TestAttempt.";
 import mongoose from "mongoose";
 import { createFolder, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
@@ -36,7 +36,35 @@ const createNewTest = catchAsync(async (req:AuthenticatedRequest,res:Response):P
 
     //update the url of thumbnail in db
     test.thumbnail = publicBaseUrl(thumbnailKey);
-    test.save();
+
+    //creating initial test questions, options, correct_options
+    const totalQuestions = test.type === 'flt' ? 90 : 30;
+    for(let i=0;i<totalQuestions;i++){
+        const question:IQuestion = {
+            question_number: String(i+1),
+            question_pattern: 'mcq',
+            question_type: 'text',
+            question: '',
+            question_subject: test.type === 'flt' ?  i<30 ? 'physics' : i<60 ? 'chemistry' : 'mathematics' : test.type,
+            options:[
+                { option_name: 'A', option_type: 'text', option: ''},
+                { option_name: 'B', option_type: 'text', option: ''},
+                { option_name: 'C', option_type: 'text', option: ''},
+                { option_name: 'D', option_type: 'text', option: ''}
+            ]
+        }
+            
+        const correct_option:ICorrectOptions = {
+            question_number: String(i+1),
+            correct_option: ''
+        }
+
+        test.questions.push(question);
+        test.correct_options.push(correct_option);
+    }
+
+    //saving the final Test document
+    await test.save();
 
     return sendSuccess(res, 200, 'Successful request', "success" );
 })
@@ -143,17 +171,136 @@ const getTestStartDetailsById = catchAsync(async (req:AuthenticatedRequest,res:R
 })
 
 const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
-    const id = req.params?.id;
-    if(!id){
+    const testId = req.params?.id;
+    if(!testId){
         return sendError(res, 400, 'Please provide test id', {});
     }
 
-    const testDetails = await Test.findById(id).select({questions:1});
-    testDetails.questions = req.body;
-    testDetails.save();
-
+    const { question_number, question_pattern, question_subject, question, option_A:option_A_text, option_B:option_B_text, option_C:option_C_text, option_D:option_D_text, correct_option } = req.body;
+    const { 
+        question:question_img,
+        option_A:option_A_img,
+        option_B:option_B_img, 
+        option_C:option_C_img, 
+        option_D:option_D_img 
+    } = req.files as { question?: Express.Multer.File[], option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[] };
     
-    return sendSuccess(res, 200, 'Successful request', testDetails );
+    const test = await Test.findById(testId);
+    
+    //saving question and options 
+    for(const questionItem of test.questions){
+        if(questionItem.question_number === question_number){
+            questionItem.question_pattern = (question_pattern === '' || question_pattern === undefined) ? questionItem.question_pattern : question_pattern;
+            // question is text
+            if(question !== '' && question !== undefined){
+                questionItem.question = question;
+                questionItem.question_type = 'text';
+            }
+            //question is image
+            if(question_img){
+                const questionKey = `tests/${test._id}/questions/${question_number}/question.png`;
+                const uploadedImage = await uploadFileToFolderInS3('public', question_img[0], questionKey );
+                if(!uploadedImage) {
+                    return sendError(res, 400, 'Failed to upload question Image', {});
+                }
+                questionItem.question = publicBaseUrl(questionKey);
+                questionItem.question_type = 'img';
+            }
+            //for options
+            for(const optionItem of questionItem.options){
+                // option-A
+                if(optionItem.option_name === 'A'){
+                    //options-A is text
+                    if(option_A_text !== '' && option_A_text !== undefined){
+                        optionItem.option_type = 'text' ;
+                        optionItem.option = option_A_text;
+                    }
+                    //option-A is image
+                    if(option_A_img){
+                        const option_A_Key = `tests/${test._id}/questions/${question_number}/option-A.png`;
+                        const uploadedImage = await uploadFileToFolderInS3('public', option_A_img[0], option_A_Key );
+                        if(!uploadedImage) {
+                            return sendError(res, 400, 'Failed to upload option-A Image', {});
+                        }
+                        optionItem.option_type = 'img';
+                        optionItem.option = publicBaseUrl(option_A_Key);
+                    }
+                }
+
+                // option-B
+                if(optionItem.option_name === 'B'){
+                    //option-B is text
+                    if(option_B_text !== '' && option_B_text !== undefined){
+                        optionItem.option_type = 'text' ;
+                        optionItem.option = option_B_text;
+                    }
+                    //option-B is image
+                    if(option_B_img){
+                        const option_B_Key = `tests/${test._id}/questions/${question_number}/option-B.png`;
+                        const uploadedImage = await uploadFileToFolderInS3('public', option_B_img[0], option_B_Key );
+                        if(!uploadedImage) {
+                            return sendError(res, 400, 'Failed to upload option-B Image', {});
+                        }
+                        optionItem.option_type = 'img';
+                        optionItem.option = publicBaseUrl(option_B_Key);
+                    }
+                }
+
+                // option-C
+                if(optionItem.option_name === 'C'){
+                    //options-C is text
+                    if(option_C_text !== '' && option_C_text !== undefined){
+                        optionItem.option_type = 'text' ;
+                        optionItem.option = option_C_text;
+                    }
+                    //option-C is image
+                    if(option_C_img){
+                        const option_C_Key = `tests/${test._id}/questions/${question_number}/option-C.png`;
+                        const uploadedImage = await uploadFileToFolderInS3('public', option_C_img[0], option_C_Key );
+                        if(!uploadedImage) {
+                            return sendError(res, 400, 'Failed to upload option-C Image', {});
+                        }
+                        optionItem.option_type = 'img';
+                        optionItem.option = publicBaseUrl(option_C_Key);
+                    }
+                }
+
+                // option-D
+                if(optionItem.option_name === 'D'){
+                    //option-D is text
+                    if(option_D_text !== '' && option_D_text !== undefined){
+                        optionItem.option_type = 'text' ;
+                        optionItem.option = option_D_text;
+                    }
+                    //option-D is image
+                    if(option_D_img){
+                        const option_D_Key = `tests/${test._id}/questions/${question_number}/option-D.png`;
+                        const uploadedImage = await uploadFileToFolderInS3('public', option_D_img[0], option_D_Key );
+                        if(!uploadedImage) {
+                            return sendError(res, 400, 'Failed to upload option-D Image', {});
+                        }
+                        optionItem.option_type = 'img';
+                        optionItem.option = publicBaseUrl(option_D_Key);
+                    }
+                }
+            }
+            break; // to get out of the loop so that it does not go to next question
+        }
+    }
+
+    //saving the new correct_option
+    if(correct_option !== '-'){
+        for(const correctOption of test.correct_options){
+            if(correctOption.question_number === question_number){
+                correctOption.correct_option = correct_option;
+            }
+        }
+    }
+
+    //saving the changes in db
+    await test.save();
+
+    return sendSuccess(res, 200, 'Successful request', 'hello' );
 })
 
 
@@ -173,6 +320,7 @@ const getTestQuestion = catchAsync(async (req:AuthenticatedRequest,res:Response)
         return sendError(res, 400, 'Test Not Found', {});
     }
     
+    // finding the question with the given question number
     let question; 
     for( const item of testDetails.questions){
         if(item.question_number === questionNumber){

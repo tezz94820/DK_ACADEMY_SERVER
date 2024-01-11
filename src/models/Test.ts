@@ -1,26 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-// Option schema
-interface IOption extends Document {
-    option_id: string;
+// Option type
+export interface IOption{
     option_name: string;
     option_type: string;
     option: string;
 }
 
-const OptionSchema = new Schema<IOption>({
-    option_id: mongoose.Types.ObjectId,
-    option_name: String,
-    option_type: {
-        type: String,
-        enum: ['img','text']
-    },
-    option: String,
-});
-
-// Question schema
-export interface IQuestion extends Document {
-    question_id: string;
+// Question type
+export interface IQuestion{
     question_type: string;
     question: string;
     question_pattern: string;
@@ -29,32 +17,10 @@ export interface IQuestion extends Document {
     options: IOption[];
 }
 
-const QuestionSchema = new Schema<IQuestion>({
-    question_id: mongoose.Types.ObjectId,
-    question_type: {
-        type: String,
-        enum: ['text', 'img'],
-    },
-    question: {
-        type: String,
-        required: [true, 'please provide question text/url'],
-    },
-    question_pattern: {
-        type: String,
-        enum: ['numerical', 'mcq'],
-    },
-    question_number: {
-        type: String,
-        required: [true, 'please provide question number'],
-    },
-    question_subject:{
-        type: String,
-        enum: ['physics', 'chemistry', 'mathematics'],
-        required: [true, 'please provide subject of question number'],
-    },
-    options: [OptionSchema],
-});
-
+export interface ICorrectOptions{
+    question_number: String,
+    correct_option: String
+}
 // Test schema
 export interface ITest extends Document {
     title: string;
@@ -68,7 +34,7 @@ export interface ITest extends Document {
     total_marks: string;
     free: boolean;
     questions: IQuestion[];
-    correct_options: [];
+    correct_options: ICorrectOptions[];
 }
 
 const TestSchema = new Schema<ITest>({
@@ -112,7 +78,39 @@ const TestSchema = new Schema<ITest>({
         default: true,
         required: [true, 'please provide free status'],
     },
-    questions: [QuestionSchema],
+    questions: [
+        {
+            question_type: {
+                type: String,
+                enum: ['text', 'img'],
+            },
+            question: {
+                type: String,
+            },
+            question_pattern: {
+                type: String,
+                enum: ['numerical', 'mcq'],
+            },
+            question_number: {
+                type: String,
+                required: [true, 'please provide question number'],
+            },
+            question_subject:{
+                type: String,
+                enum: ['physics', 'chemistry', 'mathematics'],
+            },
+            options: [
+                {
+                    option_name: String,
+                    option_type: {
+                        type: String,
+                        enum: ['img','text']
+                    },
+                    option: String,
+                }
+            ],
+        }
+    ],
     correct_options:[
         {
             question_number: String,
