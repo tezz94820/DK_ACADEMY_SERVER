@@ -42,7 +42,7 @@ const createNewTest = catchAsync(async (req:AuthenticatedRequest,res:Response):P
     for(let i=0;i<totalQuestions;i++){
         const question:IQuestion = {
             question_number: String(i+1),
-            question_pattern: 'mcq',
+            question_pattern: ((i>=0 && i<=19) || (i>=30 && i<=49) || (i>=60 && i<=79)) ? 'mcq' : 'numerical',
             question_type: 'text',
             question: '',
             question_subject: test.type === 'flt' ?  i<30 ? 'physics' : i<60 ? 'chemistry' : 'mathematics' : test.type,
