@@ -349,6 +349,7 @@ const getTestAttemptRegistry = catchAsync(async (req:AuthenticatedRequest,res:Re
         return {
             question_number: question.question_number,
             question_pattern: question.question_pattern,
+            question_subject: question.question_subject,
             option:'',
             user_interaction:'not-visited'
         }
@@ -507,7 +508,63 @@ const deleteTest = catchAsync(async (req:AuthenticatedRequest,res:Response):Prom
 })
 
 
+const getTestSummary = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const testAttemptId = req.params?.test_attempt_id;
+    if(!testAttemptId){
+        return sendError(res, 400, 'Please provide test attempt  id', {});
+    }
+
+    const testAttemptDetails = await TestAttempt.findById(testAttemptId).lean(true);
+    if(!testAttemptDetails){
+        return sendError(res, 400, 'Test Attempt Not Found', {});
+    }
+    
+    // initializing the empty object
+    const test_summary = {};
+    const subjects = ['total','physics', 'physics_numerical', 'chemistry', 'chemistry_numerical', 'mathematics', 'mathematics_numerical'];
+    subjects.forEach( subject => {
+        test_summary[subject] = {
+            total_questions:0,
+            answered:0,
+            not_answered:0,
+            marked_review:0,
+            not_visited:0
+        }
+    })
+
+    // calculating the test summary for subjects except for total
+    testAttemptDetails.questions.forEach( question => {
+        const subjectName = question.question_pattern === 'mcq' ? question.question_subject : (question.question_subject + '_numerical');
+        test_summary[subjectName].total_questions = test_summary[subjectName].total_questions + 1;
+        if(question.user_interaction === 'answered' || question.user_interaction === 'marked-answered'){
+            test_summary[subjectName].answered = test_summary[subjectName].answered + 1;
+        }
+        if(question.user_interaction === 'not-answered'){
+            test_summary[subjectName].not_answered = test_summary[subjectName].not_answered + 1;
+        }
+        if(question.user_interaction === 'marked'){
+            test_summary[subjectName].marked_review = test_summary[subjectName].marked_review + 1;
+        }
+        if(question.user_interaction === 'not-visited'){
+            test_summary[subjectName].not_visited = test_summary[subjectName].not_visited + 1;
+        }
+    })
+
+    //adding all subjects to get total 
+    for(const subject in test_summary){
+        test_summary['total'].total_questions = test_summary['total'].total_questions + test_summary[subject].total_questions; 
+        test_summary['total'].answered = test_summary['total'].answered + test_summary[subject].answered;
+        test_summary['total'].not_answered = test_summary['total'].not_answered + test_summary[subject].not_answered;
+        test_summary['total'].marked_review = test_summary['total'].marked_review + test_summary[subject].marked_review;
+        test_summary['total'].not_visited = test_summary['total'].not_visited + test_summary[subject].not_visited;
+    }
+    
+
+
+    return sendSuccess(res, 200, 'Successful request', {test_summary} );
+})
+
 
 
 export { createNewTest, getTestListTypeWise, getTestDetailsById, getTestStartDetailsById, createTestQuestions, getTestQuestion, getTestAttemptRegistry,
-    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest }
+    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest, getTestSummary  }

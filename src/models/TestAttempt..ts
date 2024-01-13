@@ -5,6 +5,7 @@ export interface IQuestionAttempt {
     question_pattern: string;
     option: string;
     user_interaction: string;
+    question_subject: string;
 }
 
 // Question schema
@@ -25,6 +26,9 @@ const QuestionSchema = new Schema<IQuestionAttempt>({
     user_interaction: {
         type: String,
         enum: ['answered','not-answered','marked','marked-answered','not-visited']
+    },
+    question_subject: {
+        type: String
     }
 })
 // Test Attempt  schema
