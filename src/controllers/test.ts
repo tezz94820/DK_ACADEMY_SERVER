@@ -558,7 +558,6 @@ const getTestSummary = catchAsync(async (req:AuthenticatedRequest,res:Response):
         test_summary['total'].marked_review = test_summary['total'].marked_review + test_summary[subject].marked_review;
         test_summary['total'].not_visited = test_summary['total'].not_visited + test_summary[subject].not_visited;
     }
-    
 
 
     return sendSuccess(res, 200, 'Successful request', {test_summary} );
@@ -566,5 +565,96 @@ const getTestSummary = catchAsync(async (req:AuthenticatedRequest,res:Response):
 
 
 
+
+const getTestResult = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const testAttemptId = req.params?.test_attempt_id;
+    if(!testAttemptId){
+        return sendError(res, 400, 'Please provide test attempt  id', {});
+    }
+
+    const testAttemptDetails = await TestAttempt.findById(testAttemptId).lean(true);
+    if(!testAttemptDetails){
+        return sendError(res, 400, 'Test Attempt Not Found', {});
+    }
+    
+    const correct_options = await Test.findById(testAttemptDetails.test_id).select('correct_options').lean(true);
+    if(!correct_options){
+        return sendError(res, 400, 'Correct Options Not Found', {});
+    }
+
+    // initializing the empty object
+    const test_result = {};
+    const subjects = ['total','physics', 'physics_numerical', 'chemistry', 'chemistry_numerical', 'mathematics', 'mathematics_numerical'];
+    subjects.forEach( subject => {
+        test_result[subject] = {
+            correct_questions: 0,
+            incorrect_questions: 0,
+            left_questions: 0,
+            total_questions: 0,
+            score_total: 0,
+            score_acheived: 0
+        }
+    })
+
+    // calculating the test summary(total,correct,incorrect) for subjects except for total
+    testAttemptDetails.questions.forEach( question => {
+        // making the subject name in right format 
+        const subjectName = question.question_pattern === 'mcq' ? question.question_subject : (question.question_subject + '_numerical');
+        // counting total_questions for every subject
+        test_result[subjectName].total_questions += 1;
+        // if the question is answered or marked-answered 
+        if(question.user_interaction === 'answered' || question.user_interaction === 'marked-answered'){
+            const correctOption = correct_options.correct_options.find( item => item.question_number === question.question_number).correct_option;
+            if(question.question_pattern === 'mcq'){
+                if(question.option === correctOption){
+                    test_result[subjectName].correct_questions += 1;
+                }
+                else{
+                    test_result[subjectName].incorrect_questions += 1;
+                }
+            }
+            else if(question.question_pattern === 'numerical'){
+                const [low, high] = correctOption.split('-');
+                const isValidRange = low && high && question.option >= low && question.option <= high;
+                if(isValidRange){
+                    test_result[subjectName].correct_questions += 1;
+                }
+                else{
+                    test_result[subjectName].incorrect_questions += 1;
+                }
+            }
+        }
+    })
+
+    // calculating testsummary(score_achevied,score_total,left_questions) for every subject
+    for(const subject in test_result){
+        test_result[subject].left_questions = test_result[subject].total_questions - (test_result[subject].correct_questions + test_result[subject].incorrect_questions);
+        // for numerical
+        if(['physics_numerical', 'chemistry_numerical', 'mathematics_numerical'].includes(subject) ){
+            test_result[subject].score_total = Math.min(5*4,test_result[subject].total_questions*4);
+            test_result[subject].score_acheived = Math.min(5*4,test_result[subject].correct_questions*4 - test_result[subject].incorrect_questions );
+        }// for mcq
+        else{
+            test_result[subject].score_total = test_result[subject].total_questions*4;
+            test_result[subject].score_acheived = test_result[subject].correct_questions*4 - test_result[subject].incorrect_questions;
+        }
+    }
+    
+    // calculating the total as subject
+    for(const subject in test_result){
+        test_result['total'].correct_questions += test_result[subject].correct_questions;
+        test_result['total'].incorrect_questions += test_result[subject].incorrect_questions;
+        test_result['total'].left_questions += test_result[subject].left_questions;
+        test_result['total'].total_questions += test_result[subject].total_questions;
+        test_result['total'].score_total += test_result[subject].score_total;
+        test_result['total'].score_acheived += test_result[subject].score_acheived;
+    }
+
+    return sendSuccess(res, 200, 'Successful request', {test_result} );
+})
+
+
+
+
 export { createNewTest, getTestListTypeWise, getTestDetailsById, getTestStartDetailsById, createTestQuestions, getTestQuestion, getTestAttemptRegistry,
-    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest, getTestSummary  }
+    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest, getTestSummary, getTestResult  }
