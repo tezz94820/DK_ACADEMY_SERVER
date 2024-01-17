@@ -476,7 +476,6 @@ const editTestDetails = catchAsync(async (req:AuthenticatedRequest,res:Response)
 
     //updating the thumbnail image in aws s3
     const { thumbnail } = req.files as { thumbnail?: Express.Multer.File[] };
-    console.log(thumbnail);
     if(thumbnail){
         const uploadedImage = await uploadFileToFolderInS3('public', thumbnail[0], `tests/${testId}/thumbnail.png` );
         if(!uploadedImage) {
@@ -606,7 +605,8 @@ const getTestResult = catchAsync(async (req:AuthenticatedRequest,res:Response):P
         if(question.user_interaction === 'answered' || question.user_interaction === 'marked-answered'){
             const correctOption = correct_options.correct_options.find( item => item.question_number === question.question_number).correct_option;
             if(question.question_pattern === 'mcq'){
-                if(question.option === correctOption){
+                const isCorrect = question.option && correctOption && question.option === correctOption 
+                if(isCorrect){
                     test_result[subjectName].correct_questions += 1;
                 }
                 else{
@@ -615,7 +615,7 @@ const getTestResult = catchAsync(async (req:AuthenticatedRequest,res:Response):P
             }
             else if(question.question_pattern === 'numerical'){
                 const [low, high] = correctOption.split('-');
-                const isValidRange = low && high && question.option >= low && question.option <= high;
+                const isValidRange = low && high && (Number(question.option) >= Number(low)) && (Number(question.option) <= Number(high));
                 if(isValidRange){
                     test_result[subjectName].correct_questions += 1;
                 }
@@ -656,5 +656,69 @@ const getTestResult = catchAsync(async (req:AuthenticatedRequest,res:Response):P
 
 
 
+const getTestAnswersAnalysis = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const testAttemptId = req.params?.test_attempt_id;
+    if(!testAttemptId){
+        return sendError(res, 400, 'Please provide test attempt  id', {});
+    }
+
+    const testAttemptDetails = await TestAttempt.findById(testAttemptId).lean(true);
+    if(!testAttemptDetails){
+        return sendError(res, 400, 'Test Attempt Not Found', {});
+    }
+    
+    const testDetails = await Test.findById(testAttemptDetails.test_id).select('questions correct_options').lean(true);
+    if(!testDetails){
+        return sendError(res, 400, 'Correct Options Not Found', {});
+    }
+    const plainTestDetails:any = { ... testDetails };
+
+    // initializing the empty object test_questions
+    const test_questions = {};
+    const subjects = ['physics', 'physics_numerical', 'chemistry', 'chemistry_numerical', 'mathematics', 'mathematics_numerical'];
+    subjects.forEach( subject => {
+        test_questions[subject] = [];
+    })
+
+    
+    for(const question of plainTestDetails.questions){
+        // Adding correct option to every question
+        const correctOption = plainTestDetails.correct_options.find( item => item.question_number === question.question_number );
+        question.correct_option = correctOption.correct_option;
+        // adding user selected option in every question
+        const userSelectedOption = testAttemptDetails.questions.find( item => item.question_number === question.question_number);
+        question.user_interaction = userSelectedOption.user_interaction;
+        question.user_selected_option = userSelectedOption.option;
+        // setting the user answer is correct or not
+        if(question.question_pattern === 'mcq'){
+            const isCorrect:boolean = question.user_selected_option && question.correct_option && question.user_selected_option === question.correct_option
+            if(isCorrect){
+                question.user_answer_is_correct = true;
+            }
+            else{
+                question.user_answer_is_correct = false;
+            }
+        }
+        else{
+            const [low, high] = question.correct_option.split('-');
+            const isValidRange:boolean = (low && high && (Number(question.user_selected_option) >= Number(low)) && (Number(question.user_selected_option) <= Number(high)));
+            if(isValidRange){
+                question.user_answer_is_correct = true;
+            }
+            else{
+                question.user_answer_is_correct = false;
+            }
+        }
+        // segregating the questions as per subject
+        const subjectName = question.question_pattern === 'mcq' ? question.question_subject : (question.question_subject + '_numerical');
+        test_questions[subjectName].push(question);
+    }
+
+    return sendSuccess(res, 200, 'Successful request', {test_questions} );
+})
+
+
+
+
 export { createNewTest, getTestListTypeWise, getTestDetailsById, getTestStartDetailsById, createTestQuestions, getTestQuestion, getTestAttemptRegistry,
-    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest, getTestSummary, getTestResult  }
+    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest, getTestSummary, getTestResult, getTestAnswersAnalysis  }
