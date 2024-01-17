@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import Test, { ICorrectOptions, IQuestion, ITest } from "../models/Test";
 import TestAttempt from "../models/TestAttempt.";
 import mongoose from "mongoose";
-import { createFolder, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
+import { createFolder, createPresignedUrlByKey, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
 
 const setDateFormat = (date:string):string => {
     let newDate = new Date(date).toLocaleString('en-IN'); 
@@ -299,14 +299,14 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
             }
             // saving the solution pdf if it is provided
             if(solution_pdf){
-                const uploadedPdf = await uploadFileToFolderInS3('private', solution_pdf[0], `tests/${testId}/solution_pdf.pdf` );
+                const uploadedPdf = await uploadFileToFolderInS3('private', solution_pdf[0], `tests/${testId}/solutions/${question_number}/solution_pdf.pdf` );
                 if(!uploadedPdf) {
                     return sendError(res, 400, 'Failed to upload solution Pdf to S3', {});
                 }
             }
             // saving the solution pdf if it is provided
             if(solution_video){
-                const uploadedVideo = await uploadFileToFolderInS3('private', solution_video[0], `tests/${testId}/solution_video.mp4` );
+                const uploadedVideo = await uploadFileToFolderInS3('private', solution_video[0], `tests/${testId}/solutions/${question_number}/solution_video.mp4` );
                 if(!uploadedVideo) {
                     return sendError(res, 400, 'Failed to upload solution Pdf to S3', {});
                 }
@@ -737,5 +737,35 @@ const getTestAnswersAnalysis = catchAsync(async (req:AuthenticatedRequest,res:Re
 
 
 
+
+
+const getTestSolution = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const testId = req.params?.test_id;
+    if(!testId){
+        return sendError(res, 400, 'Please provide test id', {});
+    }
+
+    const questionNumber = req.query?.question_number;
+    if(!questionNumber){
+        return sendError(res, 400, 'Please Provide question Number', {});
+    }
+
+    
+    const solution = {
+        pdfLink: '',
+        videoLink: ''
+    }
+    //fetching the video and pdf solution presigned url form s3 private folder
+    solution.pdfLink = await createPresignedUrlByKey('private',`tests/${testId}/solutions/${questionNumber}/solution_pdf.pdf`,30);
+    solution.videoLink = await createPresignedUrlByKey('private',`tests/${testId}/solutions/${questionNumber}/solution_video.mp4`,30);
+
+    return sendSuccess(res, 200, 'Successful request', {solution} );
+})
+
+
+
+
 export { createNewTest, getTestListTypeWise, getTestDetailsById, getTestStartDetailsById, createTestQuestions, getTestQuestion, getTestAttemptRegistry,
-    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest, getTestSummary, getTestResult, getTestAnswersAnalysis  }
+    OptionWithUserInteraction, getSelectedOptionByQuestionNumber, getQuestionStates, editTestDetails, deleteTest, getTestSummary, getTestResult, getTestAnswersAnalysis,
+    getTestSolution
+}
