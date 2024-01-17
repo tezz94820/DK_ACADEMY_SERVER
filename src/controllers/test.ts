@@ -182,8 +182,10 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
         option_A:option_A_img,
         option_B:option_B_img, 
         option_C:option_C_img, 
-        option_D:option_D_img 
-    } = req.files as { question?: Express.Multer.File[], option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[] };
+        option_D:option_D_img,
+        solution_pdf,
+        solution_video
+    } = req.files as { question?: Express.Multer.File[], option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[], solution_pdf?: Express.Multer.File[], solution_video?: Express.Multer.File[] };
     
     const test = await Test.findById(testId);
     
@@ -288,11 +290,26 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
         }
     }
 
-    //saving the new correct_option
-    if(correct_option !== '-'){
-        for(const correctOption of test.correct_options){
-            if(correctOption.question_number === question_number){
+    //finding the correct option by question number and saving the correct_option , solution_pdf , solution_video
+    for(const correctOption of test.correct_options){
+        if(correctOption.question_number === question_number){
+            //saving the new correct_option if it is provided
+            if(correct_option !== '-'){
                 correctOption.correct_option = correct_option;
+            }
+            // saving the solution pdf if it is provided
+            if(solution_pdf){
+                const uploadedPdf = await uploadFileToFolderInS3('private', solution_pdf[0], `tests/${testId}/solution_pdf.pdf` );
+                if(!uploadedPdf) {
+                    return sendError(res, 400, 'Failed to upload solution Pdf to S3', {});
+                }
+            }
+            // saving the solution pdf if it is provided
+            if(solution_video){
+                const uploadedVideo = await uploadFileToFolderInS3('private', solution_video[0], `tests/${testId}/solution_video.mp4` );
+                if(!uploadedVideo) {
+                    return sendError(res, 400, 'Failed to upload solution Pdf to S3', {});
+                }
             }
         }
     }

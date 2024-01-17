@@ -24,7 +24,9 @@ const multerQuestion = upload.fields([
     { name: 'option_A', maxCount: 1 },
     { name: 'option_B', maxCount: 1 },
     { name: 'option_C', maxCount: 1 },
-    { name: 'option_D', maxCount: 1 }
+    { name: 'option_D', maxCount: 1 },
+    { name: 'solution_pdf', maxCount: 1 },
+    { name: 'solution_video', maxCount: 1 },
 ])
 
 router.post('/pyq-pdf', Protect, validateAsSchema(createPdfValidationSchema), createPdf);
