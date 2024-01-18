@@ -177,31 +177,39 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
     }
 
     const { question_number, question_pattern, question_subject, question, option_A:option_A_text, option_B:option_B_text, option_C:option_C_text, option_D:option_D_text, correct_option, solution_pdf, solution_video } = req.body;
+    console.log(question);
     const { 
-        question:question_img,
         option_A:option_A_img,
         option_B:option_B_img, 
         option_C:option_C_img, 
         option_D:option_D_img,
-    } = req.files as { question?: Express.Multer.File[], option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[] };
+    } = req.files as { option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[] };
     
     const test = await Test.findById(testId);
+
+    // creating  put presigned url for uploading the question, solution_pdf ,solution_video
+    const presigned_url = {
+        question:'',
+        solution_pdf:'',
+        solution_video:''
+    }
     
     //saving question and options 
     for(const questionItem of test.questions){
         if(questionItem.question_number === question_number){
+            // if the question_pattern is not told then keep it same as in DB
             questionItem.question_pattern = (question_pattern === '' || question_pattern === undefined) ? questionItem.question_pattern : question_pattern;
             // question is text
-            if(question !== '' && question !== undefined){
+            if( question && question !== 'true'){
                 questionItem.question = question;
                 questionItem.question_type = 'text';
             }
             //question is image
-            if(question_img){
+            if(question && question === 'true'){
                 const questionKey = `tests/${test._id}/questions/${question_number}/question.png`;
-                const uploadedImage = await uploadFileToFolderInS3('public', question_img[0], questionKey );
-                if(!uploadedImage) {
-                    return sendError(res, 400, 'Failed to upload question Image', {});
+                presigned_url.question = await createPresignedPutUrlByKey('public', questionKey,'image/png', 10*60 );
+                if(!presigned_url.question) {
+                    return sendError(res, 400, 'Failed to create presigned url for question', {});
                 }
                 questionItem.question = publicBaseUrl(questionKey);
                 questionItem.question_type = 'img';
@@ -289,11 +297,6 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
     }
 
     //finding the correct option by question number and saving the correct_option and 
-    // creating  put presigned url for uploading the solution_pdf and  solution_video
-    const presigned_url = {
-        solution_pdf:'',
-        solution_video:''
-    }
     for(const correctOption of test.correct_options){
         if(correctOption.question_number === question_number){
             //saving the new correct_option if it is provided

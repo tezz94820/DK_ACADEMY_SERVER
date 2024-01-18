@@ -20,7 +20,6 @@ const multerTest = upload.fields([
 ])
 
 const multerQuestion = upload.fields([
-    { name: 'question', maxCount: 1 },
     { name: 'option_A', maxCount: 1 },
     { name: 'option_B', maxCount: 1 },
     { name: 'option_C', maxCount: 1 },
