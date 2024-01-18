@@ -176,20 +176,17 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
         return sendError(res, 400, 'Please provide test id', {});
     }
 
-    const { question_number, question_pattern, question_subject, question, option_A:option_A_text, option_B:option_B_text, option_C:option_C_text, option_D:option_D_text, correct_option, solution_pdf, solution_video } = req.body;
-    console.log(question);
-    const { 
-        option_A:option_A_img,
-        option_B:option_B_img, 
-        option_C:option_C_img, 
-        option_D:option_D_img,
-    } = req.files as { option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[] };
+    const { question_number, question_pattern, question_subject, question, option_A, option_B, option_C, option_D, correct_option, solution_pdf, solution_video } = req.body;
     
     const test = await Test.findById(testId);
 
     // creating  put presigned url for uploading the question, solution_pdf ,solution_video
     const presigned_url = {
         question:'',
+        option_A:'',
+        option_B:'',
+        option_C:'',
+        option_D:'',
         solution_pdf:'',
         solution_video:''
     }
@@ -219,16 +216,16 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
                 // option-A
                 if(optionItem.option_name === 'A'){
                     //options-A is text
-                    if(option_A_text !== '' && option_A_text !== undefined){
+                    if(option_A && option_A !== 'true'){
+                        optionItem.option = option_A;
                         optionItem.option_type = 'text' ;
-                        optionItem.option = option_A_text;
                     }
                     //option-A is image
-                    if(option_A_img){
-                        const option_A_Key = `tests/${test._id}/questions/${question_number}/option-A.png`;
-                        const uploadedImage = await uploadFileToFolderInS3('public', option_A_img[0], option_A_Key );
-                        if(!uploadedImage) {
-                            return sendError(res, 400, 'Failed to upload option-A Image', {});
+                    if(option_A && option_A === 'true'){
+                        const option_A_Key = `tests/${test._id}/questions/${question_number}/option_A.png`;
+                        presigned_url.option_A = await createPresignedPutUrlByKey('public', option_A_Key,'image/png', 10*60 );
+                        if(!presigned_url.option_A) {
+                            return sendError(res, 400, 'Failed to create presigned url for option_A', {});
                         }
                         optionItem.option_type = 'img';
                         optionItem.option = publicBaseUrl(option_A_Key);
@@ -238,16 +235,16 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
                 // option-B
                 if(optionItem.option_name === 'B'){
                     //option-B is text
-                    if(option_B_text !== '' && option_B_text !== undefined){
+                    if(option_B && option_B !== 'true'){
+                        optionItem.option = option_B;
                         optionItem.option_type = 'text' ;
-                        optionItem.option = option_B_text;
                     }
                     //option-B is image
-                    if(option_B_img){
-                        const option_B_Key = `tests/${test._id}/questions/${question_number}/option-B.png`;
-                        const uploadedImage = await uploadFileToFolderInS3('public', option_B_img[0], option_B_Key );
-                        if(!uploadedImage) {
-                            return sendError(res, 400, 'Failed to upload option-B Image', {});
+                    if(option_B && option_B === 'true'){
+                        const option_B_Key = `tests/${test._id}/questions/${question_number}/option_B.png`;
+                        presigned_url.option_B = await createPresignedPutUrlByKey('public', option_B_Key,'image/png', 10*60 );
+                        if(!presigned_url.option_B) {
+                            return sendError(res, 400, 'Failed to create presigned url for option_B', {});
                         }
                         optionItem.option_type = 'img';
                         optionItem.option = publicBaseUrl(option_B_Key);
@@ -257,16 +254,16 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
                 // option-C
                 if(optionItem.option_name === 'C'){
                     //options-C is text
-                    if(option_C_text !== '' && option_C_text !== undefined){
+                    if(option_C && option_C !== 'true'){
+                        optionItem.option = option_C;
                         optionItem.option_type = 'text' ;
-                        optionItem.option = option_C_text;
                     }
                     //option-C is image
-                    if(option_C_img){
-                        const option_C_Key = `tests/${test._id}/questions/${question_number}/option-C.png`;
-                        const uploadedImage = await uploadFileToFolderInS3('public', option_C_img[0], option_C_Key );
-                        if(!uploadedImage) {
-                            return sendError(res, 400, 'Failed to upload option-C Image', {});
+                    if(option_C && option_C === 'true'){
+                        const option_C_Key = `tests/${test._id}/questions/${question_number}/option_C.png`;
+                        presigned_url.option_C = await createPresignedPutUrlByKey('public', option_C_Key,'image/png', 10*60 );
+                        if(!presigned_url.option_C) {
+                            return sendError(res, 400, 'Failed to create presigned url for option_C', {});
                         }
                         optionItem.option_type = 'img';
                         optionItem.option = publicBaseUrl(option_C_Key);
@@ -276,16 +273,16 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
                 // option-D
                 if(optionItem.option_name === 'D'){
                     //option-D is text
-                    if(option_D_text !== '' && option_D_text !== undefined){
+                    if(option_D && option_D !== 'true'){
+                        optionItem.option = option_D;
                         optionItem.option_type = 'text' ;
-                        optionItem.option = option_D_text;
                     }
                     //option-D is image
-                    if(option_D_img){
-                        const option_D_Key = `tests/${test._id}/questions/${question_number}/option-D.png`;
-                        const uploadedImage = await uploadFileToFolderInS3('public', option_D_img[0], option_D_Key );
-                        if(!uploadedImage) {
-                            return sendError(res, 400, 'Failed to upload option-D Image', {});
+                    if(option_D && option_D === 'true'){
+                        const option_D_Key = `tests/${test._id}/questions/${question_number}/option_D.png`;
+                        presigned_url.option_D = await createPresignedPutUrlByKey('public', option_D_Key,'image/png', 10*60 );
+                        if(!presigned_url.option_D) {
+                            return sendError(res, 400, 'Failed to create presigned url for option_D', {});
                         }
                         optionItem.option_type = 'img';
                         optionItem.option = publicBaseUrl(option_D_Key);
