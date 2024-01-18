@@ -68,6 +68,17 @@ export const uploadFileToFolderInS3 = async (bucket:string,file: Express.Multer.
   };
 
 
+  export const createPresignedPutUrlByKey = async (bucket:string,key:string,contentType:string,expiresIn:number) : Promise<string> => {
+    const command = new PutObjectCommand({
+        Bucket: chooseBucket(bucket),
+        Key: key,
+        ContentType: contentType
+    })
+    const url = await getSignedUrl(AWSClient,command,{ expiresIn: expiresIn });
+    return url;
+  }
+
+
 
 // delete object using key
 export const deleteObjectByKey = async (bucket:string,key:string):Promise<boolean> => {

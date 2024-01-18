@@ -5,7 +5,7 @@ import { Request, Response } from 'express';
 import Test, { ICorrectOptions, IQuestion, ITest } from "../models/Test";
 import TestAttempt from "../models/TestAttempt.";
 import mongoose from "mongoose";
-import { createFolder, createPresignedUrlByKey, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
+import { createFolder, createPresignedPutUrlByKey, createPresignedUrlByKey, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
 
 const setDateFormat = (date:string):string => {
     let newDate = new Date(date).toLocaleString('en-IN'); 
@@ -176,16 +176,14 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
         return sendError(res, 400, 'Please provide test id', {});
     }
 
-    const { question_number, question_pattern, question_subject, question, option_A:option_A_text, option_B:option_B_text, option_C:option_C_text, option_D:option_D_text, correct_option } = req.body;
+    const { question_number, question_pattern, question_subject, question, option_A:option_A_text, option_B:option_B_text, option_C:option_C_text, option_D:option_D_text, correct_option, solution_pdf, solution_video } = req.body;
     const { 
         question:question_img,
         option_A:option_A_img,
         option_B:option_B_img, 
         option_C:option_C_img, 
         option_D:option_D_img,
-        solution_pdf,
-        solution_video
-    } = req.files as { question?: Express.Multer.File[], option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[], solution_pdf?: Express.Multer.File[], solution_video?: Express.Multer.File[] };
+    } = req.files as { question?: Express.Multer.File[], option_A?: Express.Multer.File[], option_B?: Express.Multer.File[], option_C?: Express.Multer.File[], option_D?: Express.Multer.File[] };
     
     const test = await Test.findById(testId);
     
@@ -290,7 +288,12 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
         }
     }
 
-    //finding the correct option by question number and saving the correct_option , solution_pdf , solution_video
+    //finding the correct option by question number and saving the correct_option and 
+    // creating  put presigned url for uploading the solution_pdf and  solution_video
+    const presigned_url = {
+        solution_pdf:'',
+        solution_video:''
+    }
     for(const correctOption of test.correct_options){
         if(correctOption.question_number === question_number){
             //saving the new correct_option if it is provided
@@ -298,17 +301,17 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
                 correctOption.correct_option = correct_option;
             }
             // saving the solution pdf if it is provided
-            if(solution_pdf){
-                const uploadedPdf = await uploadFileToFolderInS3('private', solution_pdf[0], `tests/${testId}/solutions/${question_number}/solution_pdf.pdf` );
-                if(!uploadedPdf) {
-                    return sendError(res, 400, 'Failed to upload solution Pdf to S3', {});
+            if(solution_pdf === 'true'){
+                presigned_url.solution_pdf = await createPresignedPutUrlByKey('private', `tests/${testId}/solutions/${question_number}/solution_pdf.pdf`,'application/pdf', 10*60 );
+                if(!presigned_url.solution_pdf) {
+                    return sendError(res, 400, 'Failed to create presigned url for solution_pdf', {});
                 }
             }
             // saving the solution pdf if it is provided
-            if(solution_video){
-                const uploadedVideo = await uploadFileToFolderInS3('private', solution_video[0], `tests/${testId}/solutions/${question_number}/solution_video.mp4` );
-                if(!uploadedVideo) {
-                    return sendError(res, 400, 'Failed to upload solution Pdf to S3', {});
+            if(solution_video === 'true'){
+                presigned_url.solution_video = await createPresignedPutUrlByKey('private', `tests/${testId}/solutions/${question_number}/solution_video.mp4`,'video/mp4',10*60 );
+                if(!presigned_url.solution_video) {
+                    return sendError(res, 400, 'Failed to create presigned url for solution_pdf', {});
                 }
             }
         }
@@ -317,7 +320,7 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
     //saving the changes in db
     await test.save();
 
-    return sendSuccess(res, 200, 'Successful request', 'hello' );
+    return sendSuccess(res, 200, 'Successful request', {presigned_url} );
 })
 
 
