@@ -15,27 +15,22 @@ const setDateFormat = (date:string):string => {
 }
 
 const createNewTest = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
-    let { title, type, start_date, end_date, start_time, end_time, duration, total_marks, free } = req.body;
-    const { thumbnail } = req.files as { thumbnail?: Express.Multer.File[] };
+    let { title, type, start_date, end_date, start_time, end_time, duration, total_marks, free, thumbnail } = req.body;
     
     // creating new test document
     const test = await Test.create({title, type, start_date, end_date, start_time, end_time, duration, total_marks, free});
     
-    //craete folder in s3 tests folder
-    const folderCreated = await createFolder('public',`tests/${test._id}/`);
-    if(!folderCreated) {
-        return sendError(res, 400, 'Failed to create folder in s3 of current test', {});
+    const presignedUrl = {
+        thumbnail:''
     }
-
-    //save the thumbnail in the newly created folder
-    const thumbnailKey = `tests/${test._id}/thumbnail.png`;
-    const uploadedImage = await uploadFileToFolderInS3('public', thumbnail[0], thumbnailKey );
-    if(!uploadedImage) {
-        return sendError(res, 400, 'Failed to upload Thumbnail to s3', {});
+    if(thumbnail === "true"){
+        // create presigned url for uploading thumbnail image
+        const thumbnailKey = `tests/${test._id}/thumbnail.png`;
+        presignedUrl.thumbnail = await createPresignedPutUrlByKey('public', thumbnailKey, 'image/png', 10 * 60);
+    
+        //update the url of thumbnail in db
+        test.thumbnail = publicBaseUrl(thumbnailKey);
     }
-
-    //update the url of thumbnail in db
-    test.thumbnail = publicBaseUrl(thumbnailKey);
 
     //creating initial test questions, options, correct_options
     const totalQuestions = test.type === 'flt' ? 90 : 30;
@@ -66,7 +61,7 @@ const createNewTest = catchAsync(async (req:AuthenticatedRequest,res:Response):P
     //saving the final Test document
     await test.save();
 
-    return sendSuccess(res, 200, 'Successful request', "success" );
+    return sendSuccess(res, 200, 'Successful request', {presignedUrl} );
 })
 
 const getTestListTypeWise = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
@@ -478,8 +473,8 @@ const editTestDetails = catchAsync(async (req:AuthenticatedRequest,res:Response)
     if(!testId){
         return sendError(res, 400, 'Please provide test id', {});
     }
-
-    const { title, type, start_date, end_date, start_time, end_time, duration, total_marks } = req.body;
+    
+    const { title, type, start_date, end_date, start_time, end_time, duration, total_marks, thumbnail } = req.body;
     //will include the content to be edited in the db.
     const contentToChange = { title, type, start_date, end_date, start_time, end_time, duration, total_marks };
     for( let item in contentToChange){
@@ -494,16 +489,20 @@ const editTestDetails = catchAsync(async (req:AuthenticatedRequest,res:Response)
         return sendError(res, 400, 'Test Not Found', {});
     }
 
-    //updating the thumbnail image in aws s3
-    const { thumbnail } = req.files as { thumbnail?: Express.Multer.File[] };
-    if(thumbnail){
-        const uploadedImage = await uploadFileToFolderInS3('public', thumbnail[0], `tests/${testId}/thumbnail.png` );
-        if(!uploadedImage) {
-            return sendError(res, 400, 'Failed to upload Thumbnail to s3', {});
-        }
+    //updating the thumbnail image in aws s3  
+    const presignedUrl = {
+        thumbnail:''
+    }
+    if(thumbnail === "true"){
+        // create presigned url for uploading thumbnail image
+        const thumbnailKey = `tests/${testId}/thumbnail.png`;
+        presignedUrl.thumbnail = await createPresignedPutUrlByKey('public', thumbnailKey, 'image/png', 10 * 60);
+    
+        //update the url of thumbnail in db
+        test.thumbnail = publicBaseUrl(thumbnailKey);
     }
 
-    return sendSuccess(res, 200, 'Successful request', "Update Successfull" );
+    return sendSuccess(res, 200, 'Successful request', {presignedUrl} );
 })
 
 
