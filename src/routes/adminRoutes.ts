@@ -1,5 +1,5 @@
 import express from 'express';
-import { createPdf, createPdfSolution, uploadSolutionContent } from '../controllers/pdf';
+import { createPdf, createPdfSolution, editPyqPdf, uploadSolutionContent } from '../controllers/pdf';
 import { validateAsSchema } from '../middlewares/validation';
 import { createPdfValidationSchema } from '../validations/pdf';
 import { Protect, adminProtect } from '../middlewares/auth';
@@ -16,7 +16,8 @@ const multer = upload.fields([
 ])
 
 //pyq-pdf
-router.post('/pyq-pdf', Protect, validateAsSchema(createPdfValidationSchema), createPdf);
+router.post('/create-pyq-pdf', Protect, adminProtect, validateAsSchema(createPdfValidationSchema), createPdf);
+router.post('/edit-pyq-pdf/:pdf_id', Protect, adminProtect, editPyqPdf);
 router.post('/create-pdf-solution', Protect, createPdfSolution);
 router.post('/upload-solution', Protect, multer, uploadSolutionContent);
 

@@ -11,12 +11,10 @@ export interface IPYQPDF extends Document {
     price: string;
     old_price: string;
     discount: string;
-    content_link: string;
     free: boolean;
     language: string;
     display_priority: string;
     pdf_solution: Document;
-    total_questions: string;
     exam_type: string;
     createdAt: Date;
     updatedAt: Date;
@@ -34,7 +32,7 @@ const PYQPDFSchema = new Schema<IPYQPDF>({
     },
     subject: {
         type: String,
-        enum: ['Mathematics', 'Physics', 'Chemistry'],
+        enum: ['mathematics', 'physics', 'chemistry'],
         required: [true, 'please enter Subject Name'],
     },
     new_launch: {
@@ -59,9 +57,6 @@ const PYQPDFSchema = new Schema<IPYQPDF>({
     discount: {
         type: String,
     },
-    content_link: {
-        type: String,
-    },
     free:{
         type: Boolean,
         default: false
@@ -77,10 +72,6 @@ const PYQPDFSchema = new Schema<IPYQPDF>({
     pdf_solution:{
         type: Schema.Types.ObjectId,
         ref: 'PdfSolution',
-    },
-    total_questions:{
-        type: String,
-        // required: [true, 'Please enter total_questions'],
     },
     exam_type: {
         type: String,

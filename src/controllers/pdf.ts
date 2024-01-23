@@ -1,7 +1,7 @@
 import { AuthenticatedRequest } from "../middlewares/auth";
 import PdfSolution from "../models/PdfSolution";
 import PYQPDF, { IPYQPDF } from "../models/PyqPDF";
-import { createFolder, createPresignedUrlByKey, uploadFileToFolderInS3 } from "../utils/AWSClient";
+import { createFolder, createPresignedPutUrlByKey, createPresignedUrlByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
 import { sendError, sendSuccess } from "../utils/ApiResponse";
 import catchAsync from "../utils/catchAsync";
 import { Request, Response } from 'express';
@@ -35,13 +35,13 @@ const getPdfBySubject = catchAsync(async (req:AuthenticatedRequest,res:Response)
 })
 
 const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
-    const { title, module, subject, new_launch=true, thumbnail, class_name, price, old_price, content_link="not present still", free=false, language="English", display_priority,exam_type } = req.body;
-    
+    const { title, module, subject, thumbnail, class_name, price, old_price, free, language, exam_type } = req.body;
     //calculate discount
-    const discount = Math.round((Number(old_price) - Number(price)) / Number(old_price) * 100).toString();
+    const discount = Math.round( (Number(old_price) - Number(price)) / Number(old_price) * 100).toString();
+    const display_priority = 100;
 
-    //create pdf
-    const newPdfOptions = {title, module, subject, new_launch, thumbnail, class_name, price, old_price, discount, content_link, free, language, display_priority, exam_type};
+    // //create pdf
+    const newPdfOptions = {title, module, subject, class_name, price, old_price, discount, free, language, display_priority, exam_type};
     const pdf = await PYQPDF.create(newPdfOptions);
 
     //create Empty Pdf Solution Document
@@ -55,14 +55,21 @@ const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
 
     //update pdf document with pdf_solution id
     pdf.pdf_solution = pdfSolutionDoc._id;
+    const presignedUrl = {
+        thumbnail:''
+    }
+    if(thumbnail === "true"){
+        // create presigned url for uploading thumbnail image
+        const thumbnailKey = `pyq-pdf/${pdf.exam_type}/${pdf._id}/thumbnail.png`;
+        presignedUrl.thumbnail = await createPresignedPutUrlByKey('public', thumbnailKey, 'image/png', 10 * 60);
+    
+        //update the url of thumbnail in db
+        pdf.thumbnail = publicBaseUrl(thumbnailKey);
+    }
+    
     pdf.save();
 
-    //create folder in s3 pyq-pdf folder
-    const folderCreated = await createFolder('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/`);
-    if(!folderCreated) {
-        return sendError(res, 400, 'Failed to create folder in s3 of curretn pdf', {});
-    }
-    return sendSuccess(res, 201, 'Successfully created new pdf course', pdf);
+    return sendSuccess(res, 201, 'Successfully created new pdf course', {presignedUrl});
 })
 
 
@@ -225,4 +232,55 @@ const uploadSolutionContent = catchAsync( async (req:Request, res:Response): Pro
 
 
 
-export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion, uploadSolutionContent }
+
+
+
+
+
+const editPyqPdf = catchAsync( async (req:Request, res:Response): Promise<void> => {
+    const { pdf_id:pdfId } = req.params;
+    if(!pdfId) 
+        return sendError(res, 400, 'please provide pdf Id', {});
+
+    const { title, module, subject, thumbnail, class_name, price, old_price, free, language, exam_type } = req.body;
+    //contentToChange :- will include the content to be edited in the db.
+    const contentToChange = { title, module, subject, class_name, price, old_price, language, exam_type, free };
+    for( let item in contentToChange){
+        if(!contentToChange[item]){
+            delete contentToChange[item];
+        }
+    }
+    contentToChange.free = free === "true" ? true : false; 
+
+    const pdf = await PYQPDF.findByIdAndUpdate(pdfId, contentToChange);
+    //calculate discount if price or old_price is changed
+    if(contentToChange.price){
+        pdf.discount = Math.round( (Number(pdf.old_price) - Number(price)) / Number(pdf.old_price) * 100).toString();
+    }
+    if(contentToChange.old_price){
+        pdf.discount = Math.round( (Number(pdf.old_price) - Number(pdf.price)) / Number(old_price) * 100).toString();
+    }
+
+    const presignedUrl = {
+        thumbnail:''
+    }
+    if(thumbnail === "true"){
+        // create presigned url for uploading thumbnail image
+        const thumbnailKey = `pyq-pdf/${pdf.exam_type}/${pdf._id}/thumbnail.png`;
+        presignedUrl.thumbnail = await createPresignedPutUrlByKey('public', thumbnailKey, 'image/png', 10 * 60);
+    
+        //update the url of thumbnail in db
+        pdf.thumbnail = publicBaseUrl(thumbnailKey);
+    }
+    
+    pdf.save();
+
+    return sendSuccess(res, 200, 'successfull request', {presignedUrl});
+})
+
+
+
+
+
+
+export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion, uploadSolutionContent, editPyqPdf }

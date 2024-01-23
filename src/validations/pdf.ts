@@ -6,15 +6,12 @@ const createPdfValidationSchema = Joi.object({
     "string.empty": "Title cannot be empty.",
   }),
   module: Joi.string().required().messages({
-    "any.required": "Title is required.",
-    "string.empty": "Title cannot be empty.",
+    "any.required": "module is required.",
+    "string.empty": "module cannot be empty.",
   }),
   subject: Joi.string().required().messages({
     "any.required": "subject is required.",
     "string.empty": "subject cannot be empty.",
-  }),
-  new_launch: Joi.boolean().messages({
-    "boolean.base": 'The new_launch field must be a boolean value',
   }),
   thumbnail: Joi.string().required().messages({
     "any.required": "Thumbnail url is required.",
@@ -32,22 +29,15 @@ const createPdfValidationSchema = Joi.object({
     "any.required": "old_price is required.",
     "string.pattern.base": "old_Price should contains only numerical values",
   }),
-  content_link: Joi.string().messages({
-    "string.base": 'The free field must be a boolean value',
-  }),
   free: Joi.boolean().messages({
     "boolean.base": 'The free field must be a boolean value',
   }),
   language: Joi.string().messages({
     "string.base": 'The free field must be a boolean value',
   }),
-  display_priority: Joi.string().messages({
-    "any.required": "display_priority is required.",
-    "string.empty": "display_priority cannot be empty.",
-  }),
   exam_type: Joi.string().messages({
     "string.base": "exam_type must be a string value.",
-  })
+  }),
 });
 
 
