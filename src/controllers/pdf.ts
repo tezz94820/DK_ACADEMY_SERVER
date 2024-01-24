@@ -1,7 +1,7 @@
 import { AuthenticatedRequest } from "../middlewares/auth";
 import PdfSolution from "../models/PdfSolution";
 import PYQPDF, { IPYQPDF } from "../models/PyqPDF";
-import { createFolder, createPresignedPutUrlByKey, createPresignedUrlByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
+import { createFolder, createPresignedPutUrlByKey, createPresignedUrlByKey, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
 import { sendError, sendSuccess } from "../utils/ApiResponse";
 import catchAsync from "../utils/catchAsync";
 import { Request, Response } from 'express';
@@ -278,9 +278,46 @@ const editPyqPdf = catchAsync( async (req:Request, res:Response): Promise<void> 
     return sendSuccess(res, 200, 'successfull request', {presignedUrl});
 })
 
+const deletePyqPdf = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const { pdf_id:pdfId } = req.params;
+    if(!pdfId) 
+        return sendError(res, 400, 'please provide pdf Id', {});
+
+    // delete the Test from db
+    const pdf = await PYQPDF.findByIdAndDelete(pdfId);
+    if(!pdf){
+        return sendError(res, 400, 'PYQ PDF Not Found', {});
+    }
+
+    //delete the thumbnail and from the AWS S3 bucket
+    await deleteObjectByKey('public',`pyq-pdf/${pdf.exam_type}/${pdf._id}/thumbnail.png`); 
+
+    return sendSuccess(res, 200, 'Successful request', "delete Successfull" );
+})
+
+
+
+const uploadPyqPdf = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const { pdf_id:pdfId } = req.params;
+    if(!pdfId) 
+        return sendError(res, 400, 'please provide pdf Id', {});
+
+    const pdf = await PYQPDF.findById(pdfId);
+    if(!pdf){
+        return sendError(res, 400, 'PYQ PDF Not Found', {});
+    }
+
+    // create presigned put url for course pdf
+    const presignedUrl = { coursePdf: ''};
+    const pdfKey = `pyq-pdf/${pdf.exam_type}/${pdf._id}/pdf.pdf`;
+    presignedUrl.coursePdf = await createPresignedPutUrlByKey('private', pdfKey, 'application/pdf', 10 * 60);
+
+    return sendSuccess(res, 200, 'Successful request', {presignedUrl} );
+})
 
 
 
 
 
-export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion, uploadSolutionContent, editPyqPdf }
+
+export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion, uploadSolutionContent, editPyqPdf, deletePyqPdf, uploadPyqPdf }
