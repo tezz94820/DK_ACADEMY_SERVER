@@ -1,10 +1,12 @@
+import mongoose from "mongoose";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import PdfSolution from "../models/PdfSolution";
 import PYQPDF, { IPYQPDF } from "../models/PyqPDF";
-import { createFolder, createPresignedPutUrlByKey, createPresignedUrlByKey, deleteObjectByKey, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
+import { createFolder, createPresignedPutUrlByKey, createPresignedUrlByKey, deleteObjectByKey, getListOfKeysStartingWithPrefix, publicBaseUrl, uploadFileToFolderInS3 } from "../utils/AWSClient";
 import { sendError, sendSuccess } from "../utils/ApiResponse";
 import catchAsync from "../utils/catchAsync";
 import { Request, Response } from 'express';
+import {SolutionObjectType} from "../models/PdfSolution";
 
 
 
@@ -99,23 +101,56 @@ const getPdfPage = catchAsync(async (req:Request,res:Response):Promise<void> => 
 
 
 const createPdfSolution = catchAsync( async (req:Request, res:Response): Promise<void> => {
-    const { solutions, pdf_id } = req.body;
-    const { command } = req.query; 
-    //new :- replace solutions array 
-    // add :- if new questions then add. 
-    // replace :- . if exists then replace the answer
+    const { pdf_id:pdfId } = req.params;
+    const { question_number:questionNumber, video, pdf, answer} = req.body;
 
-    const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdf_id}); 
-    let newPdfSolutionDoc;
-    if(command === "new"){
-        newPdfSolutionDoc = await PdfSolution.findByIdAndUpdate(pdfSolutionDoc._id, {solutions} , {new:true});
-    }
-    else if(command === "add"){
-        const newSolutions = pdfSolutionDoc.solutions.concat(solutions);
-        newPdfSolutionDoc = await PdfSolution.findByIdAndUpdate(pdfSolutionDoc._id, {solutions:newSolutions} , {new:true});
+    if(!pdfId){
+        return sendError(res, 400, 'pelase provide the pdf_id', {});
+    }    
+    
+    if(!questionNumber){
+        return sendError(res, 400, 'please provide question number', {});
+    } 
+
+    const pdfDetails = await PYQPDF.findById(pdfId);
+    if(!pdfDetails){
+        return sendError(res, 400, 'No PDF Found', {});
     }
 
-    return sendSuccess(res, 200, 'successful request', {newPdfSolutionDoc});
+    const pdfSolutions = await PdfSolution.findOne({pyq_pdf:pdfId});
+    if(!pdfSolutions){
+        return sendError(res, 400, 'Solutions to Pdf not Found', {});
+    }
+
+    const presignedUrl = { video:'', pdf:''};
+    // if answer is provided 
+    if(answer){
+        // save the answer in the PdfSolution
+        for(const solution of pdfSolutions.solutions){
+            if(solution.question === questionNumber){
+                solution.answer = answer;
+                break;
+            }
+        }
+        await pdfSolutions.save(); 
+    }
+
+    //get the solution - ID
+    const solutionId = pdfSolutions.solutions.find( item => item.question === questionNumber)._id.toString();
+
+    if(pdf === "true"){
+        // create presigned url for uploading pdf
+        const pdfKey = `pyq-pdf/${pdfDetails.exam_type}/${pdfId}/solutions/${solutionId}/pdf.pdf`;
+        presignedUrl.pdf = await createPresignedPutUrlByKey('private', pdfKey, 'application/pdf', 10 * 60);
+    }
+
+    if(video === "true"){
+        // create presigned url for uploading video
+        const videoKey = `pyq-pdf/${pdfDetails.exam_type}/${pdfId}/solutions/${solutionId}/video.mp4`;
+        presignedUrl.video = await createPresignedPutUrlByKey('private', videoKey, 'video/mp4', 10 * 60);
+    }
+
+    return sendSuccess(res, 200, 'successful request', { presignedUrl } );
 
 })
 
@@ -148,18 +183,10 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
     if(!pdfSolutionDoc) {
         return sendError(res, 400, 'Solutions to Pdf not Found', {});
     }
-    //check if the solution to that doc exists. 
-    let solutionId:string;
-    pdfSolutionDoc.solutions.forEach( item => {
-        if(item.question === question && item.answer != '' ){
-            solutionId = item._id;
-            return;
-        }
-    })
 
-    if(!solutionId){
-        return sendError(res, 400, `Solution to Question ${question} Not Found`, {});
-    }
+    //get the solution - ID
+    const solutionId = pdfSolutionDoc.solutions.find( item => item.question === question)._id.toString();
+
 
     //create presigned url for that pdf question number
     let presignedPdfUrl:string, presignedVideoUrl:string;
@@ -180,60 +207,6 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
 
     return sendSuccess(res, 200, 'successful request', {pdf_url:presignedPdfUrl,video_url:presignedVideoUrl});
 })
-
-
-const uploadSolutionContent = catchAsync( async (req:Request, res:Response): Promise<void> => {
-    const { pdf_id:pdfId, question } = req.query;
-    if(!pdfId) return sendError(res, 400, 'please provide pdf_id', {});
-    if(!question) return sendError(res, 400, 'please provide question', {});
-    
-    const { pdf, video } = req.files as { pdf?: Express.Multer.File[], video?: Express.Multer.File[] };
-
-    //find the pdf solution doc 
-    const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdfId});
-    if(!pdfSolutionDoc) {
-        return sendError(res, 400, 'Solutions to Pdf not Found', {});
-    }
-
-    //get the solutionID. 
-    let solutionId:string;
-    pdfSolutionDoc.solutions.forEach( item => {
-        if(item.question === question && item.answer != '' ){
-            solutionId = item._id;
-            return;
-        }
-    })
-
-    //craete folder in s3 pyq-pdf folder
-    const folderCreated = await createFolder('private',`pyq-pdf/${pdfId}/solutions/${solutionId}/`);
-    if(!folderCreated) {
-        return sendError(res, 400, 'Failed to create folder in s3 of curretn pdf', {});
-    }
-
-    let videoUploaded = false;
-    let pdfUploaded = false;
-
-    //upload PDF
-    if(pdf){
-        const uploadedPdf = await uploadFileToFolderInS3('private', pdf[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/pdf.pdf` );
-        if(!uploadedPdf)  return sendError(res, 400, 'Failed to upload PDF to s3', {});
-        pdfUploaded = true;
-    }
-    
-    //upload Video
-    if(video){
-        const uploadedVideo = await uploadFileToFolderInS3('private', video[0], `pyq-pdf/${pdfId}/solutions/${solutionId}/video.mp4` );
-        if(!uploadedVideo)  return sendError(res, 400, 'Failed to upload Video to s3', {});
-        videoUploaded = true;
-    }
-
-    return sendSuccess(res, 200, `successful Uploaded ${videoUploaded?'Video':''} ${videoUploaded && pdfUploaded ? 'and':''} ${pdfUploaded?'PDF':''} to particular  solutions folder ${solutionId}`, {});
-})
-
-
-
-
-
 
 
 
@@ -318,6 +291,134 @@ const uploadPyqPdf = catchAsync(async (req:AuthenticatedRequest,res:Response):Pr
 
 
 
+const getSolutionsWithCheck = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const { pdf_id:pdfId } = req.params;
+    if(!pdfId) 
+        return sendError(res, 400, 'please provide pdf Id', {});
+
+    const pdf = await PYQPDF.findById(pdfId);
+    if(!pdf){
+        return sendError(res, 400, 'PYQ PDF  Not Found', {});
+    }
+
+    const pdfSolutions = await PdfSolution.findOne({pyq_pdf: pdfId}).lean(true);
+    if(!pdfSolutions){
+        return sendError(res, 400, 'Pdf Solutions Not Found', {});
+    }
+
+    type SolutionsType = {
+        question:string;
+        answer:string;
+        video_check:boolean;
+        pdf_check:boolean;
+    }
+
+    // get the keys of the videos and pdfs through AWS S3
+    const baseKey = `pyq-pdf/${pdf.exam_type}/${pdfId}/solutions/`
+    const baseKeyArray = await getListOfKeysStartingWithPrefix('private', baseKey);
+    
+    //preparing the solution array and putting video_check and pdf_check if it exists in the baseKey array.
+    //that means if the video and pdf exists then make it true
+    const solutions:SolutionsType[] = await Promise.all(pdfSolutions.solutions.map( async item => {
+        const video_check:boolean = baseKeyArray.includes(`${baseKey}${item._id}/video.mp4`);
+        const pdf_check:boolean = baseKeyArray.includes(`${baseKey}${item._id}/pdf.pdf`);
+        const solution = {...item, video_check, pdf_check};
+        return solution;
+    }));
+    
+    return sendSuccess(res, 200, 'Successful request', {solutions} );
+})
 
 
-export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion, uploadSolutionContent, editPyqPdf, deletePyqPdf, uploadPyqPdf }
+
+
+
+const deletePdfSolution = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const { pdf_id:pdfId } = req.params;
+    const questionNumber = req.query.question_number;
+    if(!pdfId) 
+        return sendError(res, 400, 'please provide pdf Id', {});
+    if(!questionNumber){
+        return sendError(res, 400, 'please provide question number', {});
+    }
+
+    const pdf = await PYQPDF.findById(pdfId);
+    if(!pdf){
+        return sendError(res, 400, 'PYQ PDF  Not Found', {});
+    }
+
+    const pdfSolutions = await PdfSolution.findOne({pyq_pdf: pdfId});
+    if(!pdfSolutions){
+        return sendError(res, 400, 'Pdf Solutions Not Found', {});
+    }
+
+    //if its not first or last element do not delete question
+    if(!['1', String(pdfSolutions.solutions.length)].includes(questionNumber as string)){
+        return sendError(res, 400, 'Only First and last Question can be Deleted', {});
+    }   
+
+    //delete solution entry from db
+    if(questionNumber === '1'){
+        pdfSolutions.solutions = pdfSolutions.solutions.slice(1).map( item => ({...item, question:String(Number(item.question)-1)}));
+    }
+    else if(questionNumber === String(pdfSolutions.solutions.length)){
+        pdfSolutions.solutions = pdfSolutions.solutions.slice(0,-1);
+    }
+    // save the changes in the PdfSolution
+    await pdfSolutions.save(); 
+    //delete pdf solution
+    await deleteObjectByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/solutions/${questionNumber}/pdf.pdf`); 
+    //delete video solution
+    await deleteObjectByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/solutions/${questionNumber}/video.mp4`);
+    
+    return sendSuccess(res, 200, 'Successful request', "solution deleted successfully" );
+})
+
+
+
+const addPdfSolution = catchAsync( async (req:Request, res:Response): Promise<void> => {
+    const { pdf_id:pdfId } = req.params;
+    const questionNumber = req.query.question_number;
+    if(!pdfId) 
+        return sendError(res, 400, 'please provide pdf Id', {});
+    if(!questionNumber){
+        return sendError(res, 400, 'please provide question number', {});
+    } 
+
+    const pdfDetails = await PYQPDF.findById(pdfId);
+    if(!pdfDetails){
+        return sendError(res, 400, 'No PDF Found', {});
+    }
+
+    const pdfSolutions = await PdfSolution.findOne({pyq_pdf:pdfId});
+    if(!pdfSolutions){
+        return sendError(res, 400, 'Solutions to Pdf not Found', {});
+    }
+
+    //if its not first or last element do not add question
+    if(!['1', String(pdfSolutions.solutions.length+1)].includes(questionNumber as string)){
+        return sendError(res, 400, 'Only First and last Question can be Added', {});
+    }   
+
+    // if the new question "1" is added
+    if(questionNumber === '1'){
+        const initialObject = [{ _id:new mongoose.Types.ObjectId(), question:'1', answer:"-" }];
+        const restObject = pdfSolutions.solutions.map( item => ({ ...item, question:String(Number(item.question)+1)}) );
+        pdfSolutions.solutions = [ ...initialObject , ...restObject ] as SolutionObjectType[];
+    }
+    else if(questionNumber === String(pdfSolutions.solutions.length+1)){
+        const lastObject = [{ _id:new mongoose.Types.ObjectId(), question:String(pdfSolutions.solutions.length+1), answer:"-" }];
+        pdfSolutions.solutions = [ ...pdfSolutions.solutions, ...lastObject ] as SolutionObjectType[];
+    }
+    // save the changes in the PdfSolution
+    await pdfSolutions.save(); 
+
+    return sendSuccess(res, 200, 'successful request', "successfully added question" );
+
+})
+
+
+
+
+
+export { getPdfBySubject, createPdf, getPdfPage, createPdfSolution, getpdfSolution, getPdfSolutionByQuestion, editPyqPdf, deletePyqPdf, uploadPyqPdf, getSolutionsWithCheck, addPdfSolution, deletePdfSolution }

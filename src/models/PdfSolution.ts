@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Model  } from 'mongoose';
 
 //typescript types
 export type SolutionObjectType = {
-    _id: string;
+    _id: Schema.Types.ObjectId;
     question: string;
     answer: string;
 } 

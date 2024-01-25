@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createReadStream } from "fs";
 import { Upload } from "@aws-sdk/lib-storage";
@@ -91,4 +91,28 @@ export const deleteObjectByKey = async (bucket:string,key:string):Promise<boolea
         return true;
     else
         return false;
+}
+
+
+// get the list of keys starting with the given prefix
+export const getListOfKeysStartingWithPrefix = async (bucket:string, prefix:string):Promise<string[]> => {
+    
+    const command = new ListObjectsV2Command({
+        Bucket: chooseBucket(bucket),
+        MaxKeys: 1000, // the default max keys to fetch is 1000 
+        Prefix: prefix
+    })
+
+    let response:string[] = [];
+    
+    // this is used for continuation of fetching all keys. because limit is 1000 keys. if there exists more it will fetch in another request 
+    let isTruncated = true;
+    while (isTruncated) {
+        const { Contents, IsTruncated, NextContinuationToken } = await AWSClient.send(command);
+        response = [...response, ...Contents.map((item) => item.Key as string)];
+        isTruncated = IsTruncated;
+        command.input.ContinuationToken = NextContinuationToken;
+    }
+
+    return response;
 }
