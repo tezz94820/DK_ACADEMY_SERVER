@@ -108,7 +108,7 @@ export const getListOfKeysStartingWithPrefix = async (bucket:string, prefix:stri
     // this is used for continuation of fetching all keys. because limit is 1000 keys. if there exists more it will fetch in another request 
     let isTruncated = true;
     while (isTruncated) {
-        const { Contents, IsTruncated, NextContinuationToken } = await AWSClient.send(command);
+        const { Contents=[], IsTruncated, NextContinuationToken } = await AWSClient.send(command);
         response = [...response, ...Contents.map((item) => item.Key as string)];
         isTruncated = IsTruncated;
         command.input.ContinuationToken = NextContinuationToken;

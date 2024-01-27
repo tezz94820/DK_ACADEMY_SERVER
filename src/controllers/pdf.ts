@@ -46,14 +46,15 @@ const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
     const newPdfOptions = {title, module, subject, class_name, price, old_price, discount, free, language, display_priority, exam_type};
     const pdf = await PYQPDF.create(newPdfOptions);
 
-    //create Empty Pdf Solution Document
+    //create Empty Pdf Solution Document with a single question initailly
     const newPdfSolution = {
         pyq_pdf: pdf._id,
-        solutions: [],
+        solutions: [{_id:new mongoose.Types.ObjectId(),question:'1',answer:'-'}],
     }
     const pdfSolutionDoc = await PdfSolution.create(newPdfSolution);
     if(!pdfSolutionDoc)
         return sendError(res, 400, 'Failed to create pdf solution document', {});
+
 
     //update pdf document with pdf_solution id
     pdf.pdf_solution = pdfSolutionDoc._id;
@@ -262,6 +263,9 @@ const deletePyqPdf = catchAsync(async (req:AuthenticatedRequest,res:Response):Pr
         return sendError(res, 400, 'PYQ PDF Not Found', {});
     }
 
+    //delete the test solutions from PdfSolutions
+    await PdfSolution.deleteOne({pyq_pdf:pdfId});
+
     //delete the thumbnail and from the AWS S3 bucket
     await deleteObjectByKey('public',`pyq-pdf/${pdf.exam_type}/${pdf._id}/thumbnail.png`); 
 
@@ -351,25 +355,32 @@ const deletePdfSolution = catchAsync(async (req:AuthenticatedRequest,res:Respons
     if(!pdfSolutions){
         return sendError(res, 400, 'Pdf Solutions Not Found', {});
     }
+    if(pdfSolutions.solutions.length === 0){
+        return sendError(res, 400, 'No Solutions Found To Delete ', {});
+    }
 
     //if its not first or last element do not delete question
     if(!['1', String(pdfSolutions.solutions.length)].includes(questionNumber as string)){
         return sendError(res, 400, 'Only First and last Question can be Deleted', {});
     }   
 
+
+    let solutionId = '';
     //delete solution entry from db
     if(questionNumber === '1'){
+        solutionId = pdfSolutions.solutions[0]._id.toString();
         pdfSolutions.solutions = pdfSolutions.solutions.slice(1).map( item => ({...item, question:String(Number(item.question)-1)}));
     }
     else if(questionNumber === String(pdfSolutions.solutions.length)){
+        solutionId = pdfSolutions.solutions[pdfSolutions.solutions.length-1]._id.toString();
         pdfSolutions.solutions = pdfSolutions.solutions.slice(0,-1);
     }
     // save the changes in the PdfSolution
     await pdfSolutions.save(); 
     //delete pdf solution
-    await deleteObjectByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/solutions/${questionNumber}/pdf.pdf`); 
+    await deleteObjectByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/solutions/${solutionId}/pdf.pdf`); 
     //delete video solution
-    await deleteObjectByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/solutions/${questionNumber}/video.mp4`);
+    await deleteObjectByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/solutions/${solutionId}/video.mp4`);
     
     return sendSuccess(res, 200, 'Successful request', "solution deleted successfully" );
 })
