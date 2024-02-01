@@ -224,7 +224,13 @@ const editPyqPdf = catchAsync( async (req:Request, res:Response): Promise<void> 
             delete contentToChange[item];
         }
     }
-    contentToChange.free = free === "true" ? true : false; 
+    // we need to convert the datatype of free from string to boolean for "true" -> true and "false" -> false
+    if(free === "true"){
+        contentToChange.free = true;
+    }
+    else if(free === "false"){
+        contentToChange.free = false;
+    }
 
     const pdf = await PYQPDF.findByIdAndUpdate(pdfId, contentToChange);
     //calculate discount if price or old_price is changed
