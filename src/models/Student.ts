@@ -1,9 +1,15 @@
-import mongoose, { Schema, Document, Model  } from 'mongoose';
+import mongoose, { Schema, Document, Model} from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Request, Response } from 'express';
 
 //typescript types
+
+type CoursesPurchasedType = {
+    course_id: Schema.Types.ObjectId;
+    course_type: String;
+    validity: Date;
+}
 export interface IStudentInput {
     first_name: string;
     last_name: string;
@@ -19,6 +25,7 @@ export interface IStudent extends IStudentInput,Document {
     OtpAttemptCount: string;
     lastOtpRequestTime: Date;
     testAttempts: Schema.Types.ObjectId[];
+    courses_purchased: CoursesPurchasedType[];
 }
 
 interface IStudentMethods {
@@ -83,6 +90,18 @@ const StudentSchema = new Schema<IStudent, StudentModel, IStudentMethods>({
     testAttempts:{
         type: [Schema.Types.ObjectId],
         ref: 'TestAttempt'
+    },
+    courses_purchased: {
+        course_id:{
+            type: Schema.Types.ObjectId
+        },
+        course_type:{
+            type: String,
+            enum: ['pyq','theory']
+        },
+        validity: {
+            type: Date
+        },
     }
 }, {timestamps: true})
 

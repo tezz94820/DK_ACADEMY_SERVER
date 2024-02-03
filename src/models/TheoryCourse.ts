@@ -1,15 +1,7 @@
 import mongoose, { Schema, Document, Model  } from 'mongoose';
 
 //typescript types
-
-type TeachersType = {
-    name: string,
-    image: string,
-    experience: string,
-    subject: string
-}
-
-export interface IPYQPDF extends Document {
+export interface ITheoryCourse extends Document {
     title: string;
     module: string;
     subject: string;
@@ -24,14 +16,12 @@ export interface IPYQPDF extends Document {
     display_priority: string;
     pdf_solution: Document;
     exam_type: string;
-    description:string[];
-    teachers:TeachersType[];
     createdAt: Date;
     updatedAt: Date;
 }
 
 //schema
-const PYQPDFSchema = new Schema<IPYQPDF>({
+const TheorySchemaSchema = new Schema<ITheoryCourse>({
     title: {
         type: String,
         required: [true, 'Please enter the title'],
@@ -87,25 +77,14 @@ const PYQPDFSchema = new Schema<IPYQPDF>({
         type: String,
         enum: ["advance","mains"],
         default: "mains"
-    },
-    description: {
-        type: [String]
-    },
-    teachers: [
-        {
-            name: String,
-            image:String,
-            experience: String,
-            subject: String
-        }
-    ]
+    }
 }, {timestamps: true})
 
-// Compound unique index on title and exam_type
-PYQPDFSchema.index({ title: 1, exam_type: 1 }, { unique: true });
+// Compound unique index on title
+TheorySchemaSchema.index({ title: 1}, { unique: true });
 
 // model
-const PYQPDF = mongoose.model<IPYQPDF>('PyqPDF', PYQPDFSchema);
+const TheoryCourse = mongoose.model<ITheoryCourse>('PyqPDF', TheorySchemaSchema);
 
 //export
-export default PYQPDF;
+export default TheoryCourse;
