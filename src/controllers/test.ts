@@ -192,7 +192,7 @@ const createTestQuestions = catchAsync(async (req:AuthenticatedRequest,res:Respo
             // if the question_pattern is not told then keep it same as in DB
             questionItem.question_pattern = (question_pattern === '' || question_pattern === undefined) ? questionItem.question_pattern : question_pattern;
             // question is text
-            if( question && question !== 'true'){
+            if( question && question !== 'true' ){
                 questionItem.question = question;
                 questionItem.question_type = 'text';
             }
