@@ -105,10 +105,10 @@ const getPdfPage = catchAsync(async (req:AuthenticatedRequest,res:Response):Prom
     if(!pdf)
         return sendError(res, 400, 'No PDF Found', pdf);
 
-    // check if the user has purchased the product, if the course is valid as validity then add the productid in this array
+    // check if the user has purchased the product , if the course is valid as validity then add the productid in this array
     const purchasedProductIds = req.user.products_purchased.filter( item => item.validity > new Date() ).map( item => item.product_id.toString());
     if(!purchasedProductIds.includes(pdf._id.toString())){
-        return sendError(res, 400, 'Please purchase the course', {});
+        return sendError(res, 400, 'Please purchase the course', {}); 
     }
     // create a pre signed url for the user
     const presignedUrl = await createPresignedUrlByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/pdf.pdf`,20);
