@@ -9,6 +9,10 @@ import { Request, Response } from 'express';
 import {SolutionObjectType} from "../models/PdfSolution";
 
 
+interface IPyqPdfWithIsPurchased extends IPYQPDF {
+    is_purchased?: boolean
+}
+
 
 const getPdfBySubject = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
     //ensuring subject is provided
@@ -19,7 +23,21 @@ const getPdfBySubject = catchAsync(async (req:AuthenticatedRequest,res:Response)
     let {exam_type : examType}:{exam_type?: string} = req.query;
     examType = examType.toLowerCase();
     
-    const allPdf = await PYQPDF.find({ subject: { $regex: new RegExp(subject, 'i') }, exam_type: { $regex: new RegExp(examType, 'i') } }).sort({displayPriorities: 1});
+    const allPdf:IPyqPdfWithIsPurchased[] = await PYQPDF.find({ subject: { $regex: new RegExp(subject, 'i') }, exam_type: { $regex: new RegExp(examType, 'i') } }).sort({displayPriorities: 1}).lean(true);
+    
+    // if user is authenticated and req.user exists then check if the user has purchased course or not.
+    let purchasedProductIds = [];
+    // if the course is valid as validity then add the productid in this array
+    if(req.user){
+        purchasedProductIds = req.user.products_purchased.filter( item => item.validity > new Date() ).map( item => item.product_id.toString());
+    }
+    
+    // addition of is_purchased field
+    allPdf.forEach( pdf => {
+            // if user has purchased the course then add add is_purchased true or else false
+            pdf.is_purchased = purchasedProductIds.includes(pdf._id.toString());
+    }) 
+
     //segregate pdfs by module
     const modules = Array.from(new Set(allPdf.map( item => item.module)));
     let pdfModuleswise = modules.map( module => {
@@ -76,21 +94,24 @@ const createPdf = catchAsync(async (req:Request,res:Response):Promise<void> => {
 })
 
 
-const getPdfPage = catchAsync(async (req:Request,res:Response):Promise<void> => {
+const getPdfPage = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
     const { pdf_id } = req.params;
     if(!pdf_id){
         return sendError(res, 401, "please send the pdf_id",{});
     }
 
     //give the pdf if it's free
-    const pdf = await PYQPDF.findById(pdf_id);
+    const pdf = await PYQPDF.findById(pdf_id).lean(true);
     if(!pdf)
         return sendError(res, 400, 'No PDF Found', pdf);
-    // create a pre signed url for the user
-    let presignedUrl = '';
-    if(pdf.free){
-        presignedUrl = await createPresignedUrlByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/pdf.pdf`,20);
+
+    // check if the user has purchased the product, if the course is valid as validity then add the productid in this array
+    const purchasedProductIds = req.user.products_purchased.filter( item => item.validity > new Date() ).map( item => item.product_id.toString());
+    if(!purchasedProductIds.includes(pdf._id.toString())){
+        return sendError(res, 400, 'Please purchase the course', {});
     }
+    // create a pre signed url for the user
+    const presignedUrl = await createPresignedUrlByKey('private',`pyq-pdf/${pdf.exam_type}/${pdf._id}/pdf.pdf`,20);
     if(!presignedUrl){
         return sendError(res, 400, 'Failed to create folder in s3 of curretn pdf', {});
     }

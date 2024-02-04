@@ -5,9 +5,9 @@ import { Request, Response } from 'express';
 
 //typescript types
 
-type CoursesPurchasedType = {
-    course_id: Schema.Types.ObjectId;
-    course_type: String;
+export interface ProductsPurchasedType {
+    product_id: Schema.Types.ObjectId;
+    product_type: String;
     validity: Date;
 }
 export interface IStudentInput {
@@ -25,7 +25,7 @@ export interface IStudent extends IStudentInput,Document {
     OtpAttemptCount: string;
     lastOtpRequestTime: Date;
     testAttempts: Schema.Types.ObjectId[];
-    courses_purchased: CoursesPurchasedType[];
+    products_purchased: ProductsPurchasedType[];
 }
 
 interface IStudentMethods {
@@ -91,18 +91,20 @@ const StudentSchema = new Schema<IStudent, StudentModel, IStudentMethods>({
         type: [Schema.Types.ObjectId],
         ref: 'TestAttempt'
     },
-    courses_purchased: {
-        course_id:{
-            type: Schema.Types.ObjectId
-        },
-        course_type:{
-            type: String,
-            enum: ['pyq','theory']
-        },
-        validity: {
-            type: Date
-        },
-    }
+    products_purchased: [
+        {
+            product_id:{
+                type: Schema.Types.ObjectId
+            },
+            product_type:{
+                type: String,
+                enum: ['pyq','theory']
+            },
+            validity: {
+                type: Date
+            },
+        }
+    ]
 }, {timestamps: true})
 
 
