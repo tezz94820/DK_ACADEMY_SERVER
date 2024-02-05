@@ -75,11 +75,11 @@ export const createPaymentOrder = catchAsync(async (req:AuthenticatedRequest,res
                 image: "https://www.dkacademy.co.in/logo.png",
                 order_id: productOrder.id,
                 callback_url: ``,
-                // prefill: {
-                //     name: `${req.user.first_name} ${req.user.last_name}`,
-                //     email: req.user.email_verified ?  req.user.email : '',
-                //     contact: req.user.phone_verified ? `+91${req.user.phone}` : ''
-                // },
+                prefill: {
+                    name: req.user.payment_details.name ? req.user.payment_details.name : '',
+                    email: req.user.payment_details.email ? req.user.payment_details.email : '',
+                    contact: req.user.payment_details.contact ? req.user.payment_details.contact : ''
+                },
                 notes:{
                     transaction_id: transaction._id.toString()
                 },

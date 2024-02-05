@@ -5,6 +5,11 @@ import { Request, Response } from 'express';
 
 //typescript types
 
+export interface PaymentDetailsType {
+    name: string;
+    email: string;
+    contact: string;
+}
 export interface ProductsPurchasedType {
     product_id: Schema.Types.ObjectId;
     product_type: String;
@@ -26,6 +31,7 @@ export interface IStudent extends IStudentInput,Document {
     lastOtpRequestTime: Date;
     testAttempts: Schema.Types.ObjectId[];
     products_purchased: ProductsPurchasedType[];
+    payment_details?: PaymentDetailsType;
 }
 
 interface IStudentMethods {
@@ -104,7 +110,18 @@ const StudentSchema = new Schema<IStudent, StudentModel, IStudentMethods>({
                 type: Date
             },
         }
-    ]
+    ],
+    payment_details: {
+        name:{
+            type: String
+        },
+        email:{
+            type: String
+        },
+        contact:{
+            type: String
+        }
+    }
 }, {timestamps: true})
 
 
