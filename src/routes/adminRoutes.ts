@@ -6,11 +6,13 @@ import { Protect, adminProtect } from '../middlewares/auth';
 import { upload } from '../middlewares/multer';
 import { createNewTest, createTestQuestions, deleteTest, editTestDetails } from '../controllers/test';
 import { createTestValidationSchema } from '../validations/tests';
+import { createTheoryValidationSchema } from '../validations/theory';
+import { createTheoryCourse } from '../controllers/theory';
 
 
 const router = express.Router();
 
-//pyq-pdf
+//pyq course
 router.post('/create-pyq-pdf', Protect, adminProtect, validateAsSchema(createPdfValidationSchema), createPdf);
 router.post('/edit-pyq-pdf/:pdf_id', Protect, adminProtect, editPyqPdf);
 router.delete('/delete-pyq-pdf/:pdf_id', Protect, adminProtect, deletePyqPdf);
@@ -19,6 +21,17 @@ router.get('/solutions-with-check/:pdf_id', Protect, adminProtect, getSolutionsW
 router.post('/create-pdf-solution/:pdf_id', Protect, createPdfSolution);
 router.get('/add-pdf-solution/:pdf_id', Protect, addPdfSolution);
 router.delete('/delete-pdf-solution/:pdf_id', Protect, deletePdfSolution);
+
+// theory course
+router.post('/create-theory', Protect, adminProtect, validateAsSchema(createTheoryValidationSchema), createTheoryCourse);
+// router.post('/edit-pyq-pdf/:pdf_id', Protect, adminProtect, editPyqPdf);
+// router.delete('/delete-pyq-pdf/:pdf_id', Protect, adminProtect, deletePyqPdf);
+// router.get('/upload-pyq-pdf/:pdf_id', Protect, adminProtect, uploadPyqPdf);
+// router.get('/solutions-with-check/:pdf_id', Protect, adminProtect, getSolutionsWithCheck);
+// router.post('/create-pdf-solution/:pdf_id', Protect, createPdfSolution);
+// router.get('/add-pdf-solution/:pdf_id', Protect, addPdfSolution);
+// router.delete('/delete-pdf-solution/:pdf_id', Protect, deletePdfSolution);
+
 
 //test series
 router.post('/create-test', Protect, adminProtect, validateAsSchema(createTestValidationSchema), createNewTest);
