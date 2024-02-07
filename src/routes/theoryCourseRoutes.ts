@@ -1,16 +1,15 @@
 import express from 'express';
 import { Protect } from '../middlewares/auth';
 import { optionalProtect } from '../middlewares/optionalAuth';
-import { getTheoryCourseById, getTheoryCourseBySubject, getTheoryCourseLectures } from '../controllers/theory';
+import { getLectureContentByLectureId, getTheoryCourseById, getTheoryCourseBySubject, getTheoryCourseFreeLectures, getTheoryCourseLectures } from '../controllers/theory';
 
 
 const router = express.Router();
 
 router.get('/subject/:subject', optionalProtect, getTheoryCourseBySubject );
-router.get('/course-details', getTheoryCourseById);
+router.get('/course-details', optionalProtect, getTheoryCourseById);
+router.get('/free-lectures/:course_id', Protect, getTheoryCourseFreeLectures );
 router.get('/lectures/:course_id', Protect, getTheoryCourseLectures);
-// router.get('/solution', Protect, getpdfSolution );
-// router.get('/free-solution', Protect, getpdfFreeSolution)
-// router.get('/individual-solution', Protect, getPdfSolutionByQuestion );
+router.get('/lecture-content/:course_id/:lecture_id', Protect, getLectureContentByLectureId ); 
 
 export default router;  

@@ -2,7 +2,7 @@
 import catchAsync from "../utils/catchAsync";
 import { Request, Response } from 'express';
 import TheoryCourse, { ITheoryCourse, LecturesType } from "../models/TheoryCourse";
-import { createPresignedPutUrlByKey, deleteObjectByKey, getListOfKeysStartingWithPrefix, publicBaseUrl } from "../utils/AWSClient";
+import { createPresignedPutUrlByKey, createPresignedUrlByKey, deleteObjectByKey, getListOfKeysStartingWithPrefix, publicBaseUrl } from "../utils/AWSClient";
 import { sendError, sendSuccess } from "../utils/ApiResponse";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { Schema} from 'mongoose';
@@ -161,10 +161,21 @@ export const getTheoryCourseById = catchAsync(async (req:AuthenticatedRequest,re
     if(!courseId) 
         return sendError(res, 400, 'please provide Theory Course ID', {});
 
-    const theoryCourseDetails = await TheoryCourse.findById(courseId).lean(true);
+    const theoryCourseDetails:ITheoryCourseWithIsPurchased = await TheoryCourse.findById(courseId).lean(true);
     if(!theoryCourseDetails){
         return sendError(res, 400, 'Theory Course Not Found', {});
     }
+
+    // if user is authenticated and req.user exists then check if the user has purchased course or not.
+    let purchasedProductIds = [];
+    // if the course is valid as validity then add the productid in this array
+    if(req.user){
+        purchasedProductIds = req.user.products_purchased.filter( item => item.validity > new Date() ).map( item => item.product_id.toString());
+    }
+    console.log(purchasedProductIds)
+    // addition of is_purchased field, if user has purchased the course then  add is_purchased true or else false
+    theoryCourseDetails.is_purchased = purchasedProductIds.includes(theoryCourseDetails._id.toString());
+
 
     return sendSuccess(res, 200, 'Successful request', {theory_course_details:theoryCourseDetails} );
 })
@@ -313,4 +324,74 @@ export const deleteLectureToTheoryCourse = catchAsync(async (req:AuthenticatedRe
     }
 
     return sendSuccess(res, 200, 'Successful request', {} );
+})
+
+
+
+
+export const getTheoryCourseFreeLectures = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const { course_id:courseId } = req.params;
+    if(!courseId) 
+        return sendError(res, 400, 'please provide Theory Course ID', {});
+
+    const theoryCourseDetails = await TheoryCourse.findById(courseId).lean(true);
+    if(!theoryCourseDetails){
+        return sendError(res, 400, 'Theory Course Not Found', {});
+    }
+
+    const freeLectures = theoryCourseDetails.lectures.slice(0,2);
+    
+    return sendSuccess(res, 200, 'Successful request', { lectures: freeLectures } );
+})
+
+
+export const getLectureContentByLectureId = catchAsync(async (req:AuthenticatedRequest,res:Response):Promise<void> => {
+    const { course_id:courseId, lecture_id:lectureId } = req.params;
+    if(!courseId) 
+        return sendError(res, 400, 'please provide Theory Course ID', {});
+    if(!lectureId) 
+        return sendError(res, 400, 'please provide Lecture ID', {});
+
+    const theoryCourseDetails = await TheoryCourse.findById(courseId).lean(true);
+    if(!theoryCourseDetails){
+        return sendError(res, 400, 'Theory Course Not Found', {});
+    }
+
+    const lecture = theoryCourseDetails.lectures.find( item => item._id.toString() === lectureId);
+    if(!lecture){
+        return sendError(res, 400, 'Invalid Lecture ID', {});
+    }
+
+    // to check if the user has purchased the course
+    if(Number(lecture.lecture_number) > 2){
+        const purchasedContentIds = req.user.products_purchased.map( item => item.product_id.toString());
+        if(!purchasedContentIds.includes(courseId)){
+            return sendError(res, 400, 'Course Not Purchased', {});
+        }
+    }
+
+    const presignedUrl = {
+        video:'',
+        notes:''
+    }
+
+
+    
+    //create presigned url for video by lecture ID
+    try {
+        presignedUrl.video = await createPresignedUrlByKey('private',`theory-course/${courseId}/lectures/${lectureId}/video.mp4`,3600);
+    } catch (error:any) {
+        console.log(error.message)
+        return sendError(res, 400, 'No Video File Uploaded to AWS S3', {});
+    }
+
+    //create presigned url for notes by lecture ID
+    try {
+        presignedUrl.notes = await createPresignedUrlByKey('private',`theory-course/${courseId}/lectures/${lectureId}/notes.pdf`,3600);
+    } catch (error:any) {
+        console.log(error.message)
+        return sendError(res, 400, 'No Video File Uploaded to AWS S3', {});
+    }
+
+    return sendSuccess(res, 200, 'Successful request', { presigned_url: presignedUrl } );
 })

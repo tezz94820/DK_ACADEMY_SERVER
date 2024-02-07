@@ -7,7 +7,7 @@ import { optionalProtect } from '../middlewares/optionalAuth';
 const router = express.Router();
 
 router.get('/subject/:subject', optionalProtect, getPdfBySubject );
-router.get('/course-details', getPyqCourseById);
+router.get('/course-details', optionalProtect, getPyqCourseById);
 router.get('/pdf/:pdf_id', Protect, getPdfPage );
 router.get('/access-free-pdf/:pdf_id', Protect, getFreePdfPage);
 router.get('/solution', Protect, getpdfSolution );

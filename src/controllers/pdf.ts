@@ -190,7 +190,7 @@ const getpdfSolution = catchAsync( async (req:Request, res:Response): Promise<vo
     return sendSuccess(res, 200, 'successful request', {solutions});
 })
 
-const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): Promise<void> => {
+const getPdfSolutionByQuestion = catchAsync( async (req:AuthenticatedRequest, res:Response): Promise<void> => {
     const { pdf_id:pdfId, question } = req.query;
     if(!pdfId) return sendError(res, 400, 'please provide pdf_id', {});
     if(!question) return sendError(res, 400, 'please provide question', {});
@@ -202,6 +202,14 @@ const getPdfSolutionByQuestion = catchAsync( async (req:Request, res:Response): 
     const pdfSolutionDoc = await PdfSolution.findOne({pyq_pdf: pdfId});
     if(!pdfSolutionDoc) {
         return sendError(res, 400, 'Solutions to Pdf not Found', {});
+    }
+
+    // to check if the user has purchased the course
+    const purchasedContentIds = req.user.products_purchased.map( item => item.product_id.toString());
+    if(Number(question) > 5){
+        if(!purchasedContentIds.includes(pdfId as string)){
+            return sendError(res, 400, 'Course Not Purchased', {});
+        }
     }
 
     //get the solution - ID
@@ -461,11 +469,22 @@ const getPyqCourseById = catchAsync(async (req:AuthenticatedRequest,res:Response
     if(!pdfId) 
         return sendError(res, 400, 'please provide pdf Id', {});
 
-    const pyqCourseDetails = await PYQPDF.findById(pdfId).lean(true);
+    const pyqCourseDetails:IPyqPdfWithIsPurchased = await PYQPDF.findById(pdfId).lean(true);
     if(!pyqCourseDetails){
         return sendError(res, 400, 'PYQ PDF Not Found', {});
     }
 
+
+    // if user is authenticated and req.user exists then check if the user has purchased course or not.
+    let purchasedProductIds = [];
+    // if the course is valid as validity then add the productid in this array
+    if(req.user){
+        purchasedProductIds = req.user.products_purchased.filter( item => item.validity > new Date() ).map( item => item.product_id.toString());
+    }
+    // addition of is_purchased field, if user has purchased the course then  add is_purchased true or else false
+    pyqCourseDetails.is_purchased = purchasedProductIds.includes(pyqCourseDetails._id.toString());
+
+    
     return sendSuccess(res, 200, 'Successful request', {pyq_course_details:pyqCourseDetails} );
 })
 
