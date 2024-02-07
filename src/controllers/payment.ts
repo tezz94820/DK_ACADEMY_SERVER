@@ -8,6 +8,7 @@ import Student from "../models/Student";
 import Transaction from "../models/Transaction";
 import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils";
 import { VALIDITY_IN_MONTHS } from "../constants/pyqCourse";
+import TheoryCourse from "../models/TheoryCourse";
 
 type ProductOptions = {
     key:string;
@@ -37,62 +38,65 @@ export const createPaymentOrder = catchAsync(async (req:AuthenticatedRequest,res
     const { type, product_id:productId } = req.body;
     if(!type)
         return sendError(res, 400, 'please provide type', {});
+    if(!['pyq','theory'].includes(type))
+        return sendError(res, 400, 'type must be pyq or theory', {});
     if(!productId)
         return sendError(res, 400, 'please provide product_id', {});
 
     
     let checkoutOptions:ProductOptions;
-    
+    let product;
     if(type === 'pyq'){
-        // find the PyqPdf course
-        const pyqPdf = await PYQPDF.findById(productId);
-        if(!pyqPdf){
-            return sendError(res, 400, 'Pyq PDF not found', {});
-        }
+        product = await PYQPDF.findById(productId);
+    }
+    else if(type === 'theory'){
+        product = await TheoryCourse.findById(productId);
+    }
+    if(!product)
+        return sendError(res, 400, 'Product not found', {});
         
-        //create a transaction for this product
-        const transaction = new Transaction();
-        transaction.student_id = req.user._id;
-        transaction.product_type = 'pyq';
-        transaction.product_id = pyqPdf._id;
-        transaction.amount = (parseInt(pyqPdf.price)*100).toString();
-        transaction.status = 'started';
+    //create a transaction for this product
+    const transaction = new Transaction();
+    transaction.student_id = req.user._id;
+    transaction.product_type = type;
+    transaction.product_id = product._id;
+    transaction.amount = (parseInt(product.price)*100).toString();
+    transaction.status = 'started';
 
-        const options = {
-            amount: parseInt(pyqPdf.price)*100,  // amount in the smallest currency unit paisa
+    const options = {
+        amount: parseInt(product.price)*100,  // amount in the smallest currency unit paisa
+        currency: "INR",
+        receipt: transaction._id.toString()
+    }
+
+    try {
+        const productOrder = await razorpayInstance.orders.create(options);
+        checkoutOptions = {
+            key: process.env.RAZORPAY_KEY_ID,
+            amount: product.price,
             currency: "INR",
-            receipt: transaction._id.toString()
-        }
-
-        try {
-            const productOrder = await razorpayInstance.orders.create(options);
-            checkoutOptions = {
-                key: process.env.RAZORPAY_KEY_ID,
-                amount: pyqPdf.price,
-                currency: "INR",
-                name: "DK Academy",
-                description: pyqPdf.title,
-                image: "https://www.dkacademy.co.in/logo.png",
-                order_id: productOrder.id,
-                callback_url: ``,
-                prefill: {
-                    name: req.user.payment_details.name ? req.user.payment_details.name : '',
-                    email: req.user.payment_details.email ? req.user.payment_details.email : '',
-                    contact: req.user.payment_details.contact ? req.user.payment_details.contact : ''
-                },
-                notes:{
-                    transaction_id: transaction._id.toString()
-                },
-                theme: {
-                    color: "#1e40af",
-                }
+            name: "DK Academy",
+            description: product.title,
+            image: "https://www.dkacademy.co.in/logo.png",
+            order_id: productOrder.id,
+            callback_url: ``,
+            prefill: {
+                name: req.user.payment_details.name ? req.user.payment_details.name : '',
+                email: req.user.payment_details.email ? req.user.payment_details.email : '',
+                contact: req.user.payment_details.contact ? req.user.payment_details.contact : ''
+            },
+            notes:{
+                transaction_id: transaction._id.toString()
+            },
+            theme: {
+                color: "#1e40af",
             }
-            transaction.order_id = productOrder.id;
-            await transaction.save();
-
-        } catch (error:any) {
-            return sendError(res, 400, error.message, {});
         }
+        transaction.order_id = productOrder.id;
+        await transaction.save();
+
+    } catch (error:any) {
+        return sendError(res, 400, error.message, {});
     }
       
     sendSuccess(res, 200, 'Student created successfully', {options:checkoutOptions});

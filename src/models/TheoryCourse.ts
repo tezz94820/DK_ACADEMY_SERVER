@@ -1,6 +1,20 @@
 import mongoose, { Schema, Document, Model  } from 'mongoose';
 
 //typescript types
+
+type TeachersType = {
+    name: string,
+    image: string,
+    experience: string,
+    subject: string
+}
+
+export interface LecturesType {
+    _id: mongoose.Types.ObjectId
+    title: string;
+    lecture_number:string;
+}
+
 export interface ITheoryCourse extends Document {
     title: string;
     module: string;
@@ -13,6 +27,9 @@ export interface ITheoryCourse extends Document {
     discount: string;
     language: string;
     display_priority: string;
+    description:string[];
+    teachers:TeachersType[];
+    lectures: LecturesType[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -62,6 +79,26 @@ const TheorySchemaSchema = new Schema<ITheoryCourse>({
         type: String,
         required: [true, 'Please enter display_priority'],
     },
+    description: {
+        type: [String]
+    },
+    teachers: [
+        {
+            name: String,
+            image:String,
+            experience: String,
+            subject: String
+        }
+    ],
+    lectures: [
+        {
+            _id: {
+                type: Schema.Types.ObjectId,
+            },
+            title: String,
+            lecture_number: String
+        }
+    ]
 }, {timestamps: true})
 
 // model

@@ -251,7 +251,7 @@ const editPyqPdf = catchAsync( async (req:Request, res:Response): Promise<void> 
         contentToChange.free = false;
     }
 
-    const pdf = await PYQPDF.findByIdAndUpdate(pdfId, contentToChange);
+    const pdf = await PYQPDF.findByIdAndUpdate(pdfId, contentToChange,{new:true});
     //calculate discount if price or old_price is changed
     if(contentToChange.price){
         pdf.discount = Math.round( (Number(pdf.old_price) - Number(price)) / Number(pdf.old_price) * 100).toString();
