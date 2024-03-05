@@ -10,6 +10,6 @@ router.get('/subject/:subject', optionalProtect, getTheoryCourseBySubject );
 router.get('/course-details', optionalProtect, getTheoryCourseById);
 router.get('/free-lectures/:course_id', Protect, getTheoryCourseFreeLectures );
 router.get('/lectures/:course_id', Protect, getTheoryCourseLectures);
-router.get('/lecture-content/:course_id/:lecture_id', Protect, getLectureContentByLectureId ); 
+router.get('/lecture-content/:course_id/:lecture_id', Protect, getLectureContentByLectureId );
 
 export default router;  
