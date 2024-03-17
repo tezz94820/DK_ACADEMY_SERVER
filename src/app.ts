@@ -6,7 +6,7 @@ import morgan from 'morgan';
 import indexRoutes from './routes/indexRoute'
 import connectDB from './db/connect'
 const app = express();
-env.config();
+env.config() ;
 
 
 
