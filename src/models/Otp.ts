@@ -26,4 +26,4 @@ OtpSchema.index({ expiration_time: 1 }, { expireAfterSeconds: 0 });
 const Otp = mongoose.model<IOtp>('Otp', OtpSchema);
 
 //export
-export default Otp;
+export default Otp; 
