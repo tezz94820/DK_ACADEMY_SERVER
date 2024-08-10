@@ -6,7 +6,7 @@ import otpGenerator from 'otp-generator';
 import { AddMinutesToDate } from "../utils/dateFunctions";
 import Otp from "../models/Otp";
 import bcrypt from 'bcrypt';
-import sendOtp from "../utils/sendOtp";
+import { sendOtpAWS } from "../utils/sendOtp";
 import { MAX_OTP_TRIALS, MAX_OTP_TRIALS_IN_MINUTES, OTP_EXPIRE_AFTER_MINUTES } from "../constants/otp";
 import { decode, encode } from "../utils/crypt";
 import { emailOrPhoneNumber } from "../services/auth";
@@ -102,7 +102,7 @@ const getOtp = catchAsync(async (req:Request,res:Response,next:NextFunction):Pro
     
     // sendOTP by fast2way sms :- it is set but unabled it to save cost
     if(process.env.NODE_ENV === 'production'){
-        const sendDetails = await sendOtp(otp,phone);
+        const sendDetails = await sendOtpAWS(otp,phone);
         
         if(!sendDetails.return)
             return sendError(res, 400, 'Failed to send OTP', {status:"fail"});
