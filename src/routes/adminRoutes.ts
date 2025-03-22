@@ -8,6 +8,8 @@ import { createNewTest, createTestQuestions, deleteTest, editTestDetails } from 
 import { createTestValidationSchema } from '../validations/tests';
 import { createTheoryValidationSchema } from '../validations/theory';
 import { addLectureToTheoryCourse, createTheoryCourse, deleteLectureToTheoryCourse, deleteTheoryCourse, editTheoryCourse, getTheoryCourseLecturesContentWithCheck, uploadTheoryCourseLectureContent } from '../controllers/theory';
+import contactFormController from '../controllers/ContactForm';
+
 
 
 const router = express.Router();
@@ -38,6 +40,8 @@ router.post('/edit-test/:id', Protect, adminProtect, editTestDetails);
 router.delete('/delete-test/:id', Protect, adminProtect, deleteTest);
 router.post('/create-test-questions/:id', Protect, adminProtect, createTestQuestions);
 
-
+//contact-form
+router.get('/get-contact-form', contactFormController.getContactForms);
+router.put('/update-contact-form/:id', contactFormController.updateCalledStatus);
 
 export default router;  

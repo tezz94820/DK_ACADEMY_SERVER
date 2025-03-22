@@ -15,7 +15,7 @@ app.use(cors({
     origin: [
         'https://dkacademy.co.in',
         'https://www.dkacademy.co.in',
-        'http://localhost:3000'
+        'http://localhost:3001'
     ],
     credentials:true,
     // optionSuccessStatus:200,
