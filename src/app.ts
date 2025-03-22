@@ -8,8 +8,6 @@ import connectDB from './db/connect'
 const app = express();
 env.config() ;
 
-
-
 //middlewares
 app.use(cors({
     origin: [

@@ -8,7 +8,7 @@ import { createNewTest, createTestQuestions, deleteTest, editTestDetails } from 
 import { createTestValidationSchema } from '../validations/tests';
 import { createTheoryValidationSchema } from '../validations/theory';
 import { addLectureToTheoryCourse, createTheoryCourse, deleteLectureToTheoryCourse, deleteTheoryCourse, editTheoryCourse, getTheoryCourseLecturesContentWithCheck, uploadTheoryCourseLectureContent } from '../controllers/theory';
-import contactFormController from '../controllers/ContactForm';
+import { getContactForms, updateCalledStatus} from '../controllers/contactForm';
 
 
 
@@ -41,7 +41,7 @@ router.delete('/delete-test/:id', Protect, adminProtect, deleteTest);
 router.post('/create-test-questions/:id', Protect, adminProtect, createTestQuestions);
 
 //contact-form
-router.get('/get-contact-form', contactFormController.getContactForms);
-router.put('/update-contact-form/:id', contactFormController.updateCalledStatus);
+router.get('/get-contact-form', getContactForms);
+router.put('/update-contact-form/:id', updateCalledStatus);
 
 export default router;  

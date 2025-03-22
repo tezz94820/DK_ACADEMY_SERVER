@@ -75,4 +75,4 @@ const updateCalledStatus = catchAsync(async (req: Request, res: Response): Promi
 });
 
 
-export default {createContactForm, getContactForms, updateCalledStatus};
+export {createContactForm, getContactForms, updateCalledStatus};
