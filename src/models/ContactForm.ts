@@ -11,6 +11,7 @@ export interface IcontactForm {
     email: string;
     phone: string;
     message: string;
+    class: string;
     called: boolean;
     createdAt?: Date;
     updatedAt?: Date;
@@ -34,6 +35,10 @@ const ContactFormSchema = new Schema<IcontactForm>({
     phone: {
         type: String,
         required: [true, 'Please provide your phone number'],
+    },
+    class: {
+        type: String,
+        required: [true, 'please enter the class']
     },
     message: {
         type: String,

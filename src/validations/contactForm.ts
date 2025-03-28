@@ -20,6 +20,10 @@ const createContactFormValidationSchema = Joi.object({
       "any.required": "Phone number is required.",
       "string.empty": "Phone number cannot be empty.",
     }),
+    class: Joi.string().messages({
+      "any.required": "class is required.",
+      "string.empty": "class cannot be empty.",
+    }),
   message: Joi.string().allow("").optional(),
 });
 

@@ -7,7 +7,7 @@ import moment from "moment";
 
 const createContactForm = catchAsync(async (req:Request,res:Response):Promise<void> => {
     
-    let {first_name,last_name,email,phone,message} = req.body;
+    let {first_name,last_name,email,phone,message,class:studentClass} = req.body;
     
     //create new Student
     const newStudent = await ContactForm.create({
@@ -15,7 +15,8 @@ const createContactForm = catchAsync(async (req:Request,res:Response):Promise<vo
         last_name,
         email,
         phone,
-        message
+        message,
+        class:studentClass
     });
 
     return sendSuccess(res, 200, 'Contact Form created', newStudent);
